@@ -1,0 +1,165 @@
+/* Variables de Color */
+:root {
+    --primary-color: #4361ee;
+    --secondary-color: #3a0ca3;
+    --success-color: #4cc9f0;
+    --warning-color: #f72585;
+    --light-bg: #f8f9fa;
+    --dark-bg: #212529;
+}
+
+/* Estilos Globales */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    min-height: 100vh;
+}
+
+/* Header Gradient */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
+}
+
+/* Animación Flotante */
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px);
+    }
+    50% {
+        transform: translateY(-15px);
+    }
+}
+
+/* Efectos en Tarjetas */
+.card {
+    border-radius: 15px !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+/* Estilos para Tareas */
+.task-checkbox:checked + .form-check-label .task-title {
+    text-decoration: line-through;
+    color: #6c757d;
+}
+
+.task-title.completed {
+    text-decoration: line-through;
+    color: #6c757d;
+}
+
+/* Badges Personalizados */
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+    border-radius: 10px;
+}
+
+.bg-primary { background-color: var(--primary-color) !important; }
+.bg-danger { background-color: var(--warning-color) !important; }
+.bg-warning { background-color: #ff9e00 !important; }
+.bg-success { background-color: var(--success-color) !important; }
+.bg-info { background-color: #7209b7 !important; }
+
+/* Botones Personalizados */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    transform: scale(1.05);
+}
+
+/* List Group Items */
+.list-group-item {
+    border-radius: 10px !important;
+    margin-bottom: 0.5rem;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    transition: all 0.3s ease;
+}
+
+.list-group-item:hover {
+    background-color: rgba(67, 97, 238, 0.05);
+    border-color: var(--primary-color) !important;
+}
+
+/* Progress Bar */
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+/* Navegación */
+.navbar {
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+
+.nav-link {
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    color: var(--primary-color) !important;
+    transform: translateY(-2px);
+}
+
+/* Footer */
+footer {
+    background: linear-gradient(135deg, var(--dark-bg) 0%, #343a40 100%);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .display-4 {
+        font-size: 2.5rem;
+    }
+    
+    .btn-lg {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+    }
+    
+    .list-group-item {
+        padding: 0.75rem;
+    }
+}
+
+/* Efectos de Foco */
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+}
+
+/* Animación de Entrada */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card, .list-group-item {
+    animation: fadeIn 0.5s ease-out;
+}
