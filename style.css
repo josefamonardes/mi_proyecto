@@ -1,165 +1,162 @@
-/* Variables de Color */
-:root {
-    --primary-color: #4361ee;
-    --secondary-color: #3a0ca3;
-    --success-color: #4cc9f0;
-    --warning-color: #f72585;
-    --light-bg: #f8f9fa;
-    --dark-bg: #212529;
-}
-
-/* Estilos Globales */
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    min-height: 100vh;
-}
-
-/* Header Gradient */
-.bg-gradient-primary {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
-}
-
-/* Animación Flotante */
-.animate-float {
-    animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-    0%, 100% {
-        transform: translateY(0px);
-    }
-    50% {
-        transform: translateY(-15px);
-    }
-}
-
-/* Efectos en Tarjetas */
-.card {
-    border-radius: 15px !important;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-    overflow: hidden;
-}
-
-.card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-}
-
-/* Estilos para Tareas */
-.task-checkbox:checked + .form-check-label .task-title {
-    text-decoration: line-through;
-    color: #6c757d;
-}
-
-.task-title.completed {
-    text-decoration: line-through;
-    color: #6c757d;
-}
-
-/* Badges Personalizados */
-.badge {
-    font-weight: 500;
-    padding: 0.35em 0.65em;
-    border-radius: 10px;
-}
-
-.bg-primary { background-color: var(--primary-color) !important; }
-.bg-danger { background-color: var(--warning-color) !important; }
-.bg-warning { background-color: #ff9e00 !important; }
-.bg-success { background-color: var(--success-color) !important; }
-.bg-info { background-color: #7209b7 !important; }
-
-/* Botones Personalizados */
-.btn-primary {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
+/* Añade esto a tu style.css */
+.task-item {
     transition: all 0.3s ease;
+    border-left: 4px solid #dee2e6;
 }
 
-.btn-primary:hover {
-    background-color: var(--secondary-color);
-    border-color: var(--secondary-color);
-    transform: scale(1.05);
-}
-
-/* List Group Items */
-.list-group-item {
-    border-radius: 10px !important;
-    margin-bottom: 0.5rem;
-    border: 1px solid rgba(0,0,0,0.1) !important;
-    transition: all 0.3s ease;
-}
-
-.list-group-item:hover {
-    background-color: rgba(67, 97, 238, 0.05);
-    border-color: var(--primary-color) !important;
-}
-
-/* Progress Bar */
-.progress {
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    border-radius: 10px;
-    font-weight: 600;
-}
-
-/* Navegación */
-.navbar {
-    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
-}
-
-.nav-link {
-    transition: all 0.3s ease;
-}
-
-.nav-link:hover {
-    color: var(--primary-color) !important;
+.task-item:hover {
     transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-/* Footer */
-footer {
-    background: linear-gradient(135deg, var(--dark-bg) 0%, #343a40 100%);
+.task-item[data-priority="urgente"] {
+    border-left-color: #dc3545;
+    background-color: rgba(220, 53, 69, 0.05);
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .display-4 {
-        font-size: 2.5rem;
-    }
-    
-    .btn-lg {
-        padding: 0.5rem 1rem;
-        font-size: 1rem;
-    }
-    
-    .list-group-item {
-        padding: 0.75rem;
-    }
+.task-item[data-priority="alta"] {
+    border-left-color: #fd7e14;
+    background-color: rgba(253, 126, 20, 0.05);
 }
 
-/* Efectos de Foco */
-.form-control:focus, .form-select:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.25rem rgba(67, 97, 238, 0.25);
+.task-item[data-priority="media"] {
+    border-left-color: #198754;
+    background-color: rgba(25, 135, 84, 0.05);
 }
 
-/* Animación de Entrada */
+.task-item[data-priority="baja"] {
+    border-left-color: #6c757d;
+}
+
+.task-completed {
+    text-decoration: line-through;
+    color: #6c757d;
+    opacity: 0.7;
+}
+
+.priority-badge {
+    font-size: 0.75em;
+    padding: 0.25em 0.6em;
+}
+
+/* Modal personalizado */
+.modal-content {
+    border-radius: 10px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+/* Animaciones */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.taskflow-alert {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .btn-group {
+        flex-wrap: wrap;
     }
-    to {
-        opacity: 1;
-        transform: translateY(0);
+    
+    .btn-group .btn {
+        margin-bottom: 5px;
+    }
+    
+    .stats-box {
+        margin-top: 10px;
+        text-align: left !important;
     }
 }
 
-.card, .list-group-item {
-    animation: fadeIn 0.5s ease-out;
+/* Añade esto a tu style.css */
+/* Estilos para tareas con fecha próxima */
+.task-due-soon {
+    border-left-color: #ffc107 !important;
+    background-color: rgba(255, 193, 7, 0.1) !important;
+}
+
+.task-overdue {
+    border-left-color: #dc3545 !important;
+    background-color: rgba(220, 53, 69, 0.1) !important;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.8; }
+    100% { opacity: 1; }
+}
+
+/* Estilos para el badge de fecha */
+.date-badge {
+    font-size: 0.75em;
+    padding: 0.2em 0.5em;
+    border-radius: 4px;
+}
+
+.date-today {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+}
+
+.date-tomorrow {
+    background-color: #0dcaf0 !important;
+    color: #000 !important;
+}
+
+.date-overdue {
+    background-color: #dc3545 !important;
+    color: white !important;
+}
+
+/* Calendario en miniatura */
+.mini-calendar {
+    width: 200px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.mini-calendar-header {
+    background-color: #4361ee;
+    color: white;
+    padding: 8px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.mini-calendar-body {
+    padding: 10px;
+    text-align: center;
+}
+
+.calendar-day {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+    margin: 2px;
+    border-radius: 50%;
+    font-size: 0.8em;
+}
+
+.calendar-day.has-task {
+    background-color: #4361ee;
+    color: white;
+    cursor: pointer;
+}
+
+.calendar-day.today {
+    background-color: #ffc107;
+    color: #000;
+    font-weight: bold;
 }

@@ -1,21 +1,283 @@
-📝 TaskFlow - Lista de Tareas
+# 📋 TaskFlow - Gestor de Tareas Inteligente
 
-📋 Descripción
-Aplicación web para gestionar tareas. Desarrollada para el curso **Ingeniería Web 1** de la UAX.
+## 🎯 Descripción del Proyecto
+**TaskFlow** es una aplicación web full-stack desarrollada como proyecto final de **Ingeniería Web 1** en la Universidad Alfonso X el Sabio (UAX). Es un gestor de tareas moderno e intuitivo que permite organizar actividades diarias con funcionalidades avanzadas de categorización, priorización y seguimiento de progreso.
 
-✨ Características
-- ✅ Añadir, editar y eliminar tareas
-- ✅ Prioridades: Baja, Media, Alta, Urgente
-- ✅ Marcar como completadas
-- ✅ Diseño con Bootstrap 5
-- ✅ Responsive
+## ✨ Características Principales
 
-🚀 Instalación
-1. Copia los archivos a `C:\xampp\htdocs\mi_proyecto\`
-2. Inicia XAMPP
-3. Abre `http://localhost/mi_proyecto/`
+### 🎨 **Frontend Avanzado**
+- ✅ Interfaz moderna con **Bootstrap 5**
+- ✅ Diseño completamente **responsivo** (mobile-first)
+- ✅ Animaciones y transiciones fluidas
+- ✅ Sistema de notificaciones en tiempo real
+- ✅ Paleta de colores profesional y consistente
 
-📁 Archivos
-- `index.html` - Página principal
-- `style.css` - Estilos
-- `script.js` - Funcionalidad
+### 📊 **Gestión de Tareas**
+- ✅ Crear, editar y eliminar tareas
+- ✅ Sistema de **4 niveles de prioridad** (Baja, Media, Alta, Urgente)
+- ✅ Marcado de tareas como completadas
+- ✅ Filtrado por estado (Todas/Pendientes/Completadas)
+- ✅ Estadísticas de progreso en tiempo real
+- ✅ Categorización visual con badges de colores
+
+### 🔧 **Tecnologías Implementadas**
+
+| Capa | Tecnologías |
+|------|-------------|
+| **Frontend** | HTML5, CSS3, Bootstrap 5, JavaScript (ES6+) |
+| **Backend** | PHP 8.x, MySQL |
+| **Herramientas** | XAMPP, Git, GitHub, VS Code |
+| **Bibliotecas** | Bootstrap Icons, Fetch API |
+
+## 📁 Estructura del Proyecto
+
+```
+mi_proyecto/
+│
+├── index.html              # Página principal
+├── style.css              # Estilos personalizados
+├── script.js              # Lógica JavaScript del frontend
+├── README.md              # Este archivo
+│
+├── backend/               # (FUTURO) Backend PHP
+│   ├── config/
+│   │   └── database.php   # Configuración de BD
+│   ├── controllers/       # Controladores
+│   ├── models/           # Modelos de datos
+│   └── api/              # Endpoints API
+│
+├── database/              # (FUTURO) Base de datos
+│   ├── schema.sql        # Estructura de tablas
+│   └── seed.sql          # Datos de prueba
+│
+└── assets/               # Recursos estáticos
+    ├── images/           # Imágenes e iconos
+    └── icons/            # Iconos personalizados
+```
+
+## 🚀 Instalación y Configuración
+
+### Requisitos Previos
+- [XAMPP](https://www.apachefriends.org/) (Apache + MySQL + PHP)
+- [Git](https://git-scm.com/)
+- [Visual Studio Code](https://code.visualstudio.com/) (recomendado)
+
+### Pasos de Instalación
+
+1. **Clonar el repositorio**
+   ```bash
+   git clone https://github.com/tu-usuario/taskflow.git
+   ```
+
+2. **Configurar el entorno**
+   - Copiar la carpeta `mi_proyecto` a `C:\xampp\htdocs\`
+   - O usar el método de clonación directa en htdocs
+
+3. **Iniciar servidores**
+   - Abrir XAMPP Control Panel
+   - Iniciar **Apache** y **MySQL**
+
+4. **Acceder a la aplicación**
+   - Abrir navegador web
+   - Ir a: `http://localhost/mi_proyecto/`
+
+5. **(Futuro) Configurar base de datos**
+   ```sql
+   -- Acceder a phpMyAdmin: http://localhost/phpmyadmin
+   -- Crear base de datos: taskflow_db
+   -- Importar archivo database/schema.sql
+   ```
+
+## 📖 Guía de Uso
+
+### 1. Añadir Nueva Tarea
+1. Escribir la descripción en el campo "¿Qué necesitas hacer hoy?"
+2. Seleccionar prioridad (Baja/Media/Alta/Urgente)
+3. Hacer clic en "Añadir" o presionar Enter
+
+### 2. Gestionar Tareas Existentes
+- **Completar**: Marcar checkbox ✓
+- **Editar**: Clic en icono ✏️
+- **Eliminar**: Clic en icono 🗑️
+- **Filtrar**: Usar botones superiores
+
+### 3. Estadísticas y Seguimiento
+- **Barra de progreso**: % de tareas completadas
+- **Contadores**: Tareas totales vs completadas
+- **Próximas fechas**: Recordatorios importantes
+
+## 🔧 Configuración del Entorno de Desarrollo
+
+### Extensiones VS Code Recomendadas
+```json
+{
+  "extensiones": [
+    "esbenp.prettier-vscode",        // Formateador
+    "ritwickdey.liveserver",         // Live Server
+    "ms-vscode.vscode-php-pack",     // PHP Extension Pack
+    "bradlc.vscode-tailwindcss",     // Tailwind CSS
+    "github.copilot"                 // GitHub Copilot
+  ]
+}
+```
+
+### Configuración de Git
+```bash
+# Configurar usuario
+git config --global user.name "Tu Nombre"
+git config --global user.email "tu.email@uax.com"
+
+# Clonar repositorio del curso
+git clone https://github.com/CanaletaFast/IngenieriaWeb.git
+```
+
+## 📚 Documentación Técnica
+
+### Estructura HTML Semántica
+```html
+<!-- Ejemplo de estructura semántica -->
+<header>    <!-- Cabecera principal -->
+<nav>       <!-- Navegación -->
+<main>      <!-- Contenido principal -->
+  <section> <!-- Sección de tareas -->
+  <aside>   <!-- Barra lateral -->
+</main>
+<footer>    <!-- Pie de página -->
+```
+
+### Estilos CSS Personalizados
+- **Variables CSS** para colores y tamaños
+- **Media Queries** para responsividad
+- **Animaciones CSS** para interacciones
+- **Flexbox/Grid** para layouts complejos
+
+### JavaScript - Funcionalidades Clave
+```javascript
+// Gestión de estado de tareas
+class TaskManager {
+  constructor() {
+    this.tasks = [];
+  }
+  
+  addTask(task) {
+    // Lógica para añadir tarea
+  }
+  
+  updateTask(id, updates) {
+    // Lógica para actualizar
+  }
+  
+  deleteTask(id) {
+    // Lógica para eliminar
+  }
+}
+```
+
+### Entregas Parciales
+1. **Unidad 2**: Estructura HTML + CSS (20%)
+2. **Unidad 3**: JavaScript + DOM (20%)
+3. **Unidad 4**: PHP + MySQL (25%)
+4. **Unidad 5**: POO PHP + Node.js (15%)
+5. **Unidad 6**: AJAX + Responsive (20%)
+
+## 🔒 Seguridad Implementada
+
+### Frontend
+- ✅ Validación de formularios en cliente
+- ✅ Sanitización de inputs
+- ✅ Protección XSS básica
+
+### Backend (Futuro)
+- ✅ Prepared statements para SQL
+- ✅ Hash de contraseñas con `password_hash()`
+- ✅ Validación en servidor
+- ✅ CSRF tokens
+
+## 📱 Compatibilidad
+
+### Navegadores Soportados
+- ✅ Chrome 90+
+- ✅ Firefox 88+
+- ✅ Safari 14+
+- ✅ Edge 90+
+
+### Dispositivos
+- ✅ Desktop (≥1024px)
+- ✅ Tablet (768px-1023px)
+- ✅ Mobile (≤767px)
+
+## 🤝 Contribución
+
+### Para Estudiantes del Curso
+1. Fork del repositorio
+2. Crear rama de feature
+3. Commit de cambios
+4. Push a la rama
+5. Pull Request
+
+### Convenciones de Código
+```javascript
+// JavaScript
+const variableName = 'valor';  // camelCase
+function nombreFuncion() {}    // camelCase
+class NombreClase {}           // PascalCase
+
+// PHP
+$variable_name = 'valor';      // snake_case
+function nombre_funcion() {}   // snake_case
+class NombreClase {}           // PascalCase
+
+// CSS
+.clase-principal {}            // kebab-case
+#elemento-id {}                // kebab-case
+```
+
+## 📞 Soporte y Contacto
+
+### Recursos del Curso
+- **Repositorio oficial**: [github.com/CanaletaFast/IngenieriaWeb](https://github.com/CanaletaFast/IngenieriaWeb)
+- **Documentación**: Archivos del curso UAX
+- **Foro de discusión**: Plataforma UAX
+
+### Contacto Estudiante
+- **Nombre**: [JOSEFA ANTONIA MONADRDES MONARDES]
+- **Email**: [jmonamon@myuax.com]
+- **GitHub**: [@josefamonardes](https://github.com/josefamonardes)
+
+## 📄 Licencia
+
+Este proyecto es desarrollado con fines educativos para el curso **Ingeniería Web 1** de la **Universidad Alfonso X el Sabio**.
+
+© 2024 TaskFlow - Proyecto Académico UAX. Todos los derechos reservados para fines educativos.
+
+## 🙏 Agradecimientos
+
+- **Universidad Alfonso X el Sabio** - Por el marco educativo
+- **Profesor del curso** - Por la guía y enseñanza
+- **Compañeros de clase** - Por la colaboración
+- **Comunidad Open Source** - Por las herramientas utilizadas
+
+---
+
+<div align="center">
+
+### ⭐ ¡Si este proyecto te resulta útil, dale una estrella en GitHub!
+
+**Desarrollado con ❤️ para Ingeniería Web 1 - UAX**
+
+[![UAX](https://img.shields.io/badge/UAX-Universidad-blue)](https://www.uax.com)
+[![Bootstrap](https://img.shields.io/badge/Bootstrap-5.3-purple)](https://getbootstrap.com)
+[![PHP](https://img.shields.io/badge/PHP-8.x-777BB4)](https://php.net)
+[![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1)](https://mysql.com)
+
+</div>
+
+## 📊 Estado del Proyecto
+
+**Estado Actual**: ✅ Fase 1 Completada (Frontend)  
+**Próxima Fase**: 🔄 Backend PHP + MySQL  
+**Fecha Estimada Finalización**: [Fecha de entrega del curso]
+
+---
+
+*Este README se actualizará conforme avance el proyecto durante el curso. Última actualización: [Fecha actual]*

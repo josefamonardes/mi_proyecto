@@ -16,6 +16,28 @@
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="https://img.icons8.com/color/96/000000/task.png">
+    
+    <style>
+        /* Estilos temporales para que funcione */
+        .task-completed {
+            text-decoration: line-through;
+            color: #6c757d !important;
+            opacity: 0.7;
+        }
+        
+        .animate-float {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+        
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%) !important;
+        }
+    </style>
 </head>
 <body>
     <!-- Navegación -->
@@ -36,20 +58,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#"><i class="bi bi-list-task"></i> Mis Tareas</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="bi bi-bar-chart"></i> Estadísticas</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> Mi Cuenta
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">Perfil</a></li>
-                            <li><a class="dropdown-item" href="#">Configuración</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item text-danger" href="#">Cerrar Sesión</a></li>
-                        </ul>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -66,14 +74,6 @@
                     <p class="lead mb-4">
                         Gestiona tus tareas de manera eficiente, establece prioridades y alcanza tus objetivos diarios.
                     </p>
-                    <div class="d-flex gap-3">
-                        <button class="btn btn-light btn-lg px-4">
-                            <i class="bi bi-lightning-charge"></i> Comenzar Ahora
-                        </button>
-                        <button class="btn btn-outline-light btn-lg px-4">
-                            <i class="bi bi-play-circle"></i> Ver Tutorial
-                        </button>
-                    </div>
                 </div>
                 <div class="col-lg-4 text-center">
                     <img src="https://img.icons8.com/color/300/000000/task.png" 
@@ -97,122 +97,104 @@
                         </h3>
                     </div>
                     <div class="card-body">
-                        <!-- Formulario para añadir tareas -->
-                        <form id="taskForm" class="mb-4">
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <input type="text" 
-                                           class="form-control form-control-lg" 
-                                           id="taskInput" 
-                                           placeholder="¿Qué necesitas hacer hoy?" 
-                                           required>
-                                </div>
-                                <div class="col-md-4">
-                                    <select class="form-select form-select-lg" id="prioritySelect">
-                                        <option value="baja">Prioridad Baja</option>
-                                        <option value="media" selected>Prioridad Media</option>
-                                        <option value="alta">Prioridad Alta</option>
-                                        <option value="urgente">Urgente</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="submit" class="btn btn-primary btn-lg w-100">
-                                        <i class="bi bi-plus-lg"></i> Añadir
-                                    </button>
-                                </div>
-                            </div>
-                        </form>
-
-                        <!-- Filtros -->
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-outline-primary active">Todas</button>
-                                <button type="button" class="btn btn-outline-primary">Pendientes</button>
-                                <button type="button" class="btn btn-outline-primary">Completadas</button>
-                            </div>
-                            <div>
-                                <span class="badge bg-info me-2">
-                                    <i class="bi bi-clock"></i> Hoy: 5 tareas
-                                </span>
-                                <span class="badge bg-success">
-                                    <i class="bi bi-check-circle"></i> Completadas: 2
-                                </span>
+                        <!-- FORMULARIO CORREGIDO (SOLO UNO) -->
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <form id="taskForm">
+                                    <div class="row g-2">
+                                        <div class="col-md-5">
+                                            <input type="text" 
+                                                   class="form-control" 
+                                                   id="taskInput" 
+                                                   placeholder="¿Qué necesitas hacer?"
+                                                   required>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <select class="form-select" id="prioritySelect">
+                                                <option value="baja">Baja</option>
+                                                <option value="media" selected>Media</option>
+                                                <option value="alta">Alta</option>
+                                                <option value="urgente">Urgente</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="datetime-local" 
+                                                   class="form-control" 
+                                                   id="taskDueDate">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button type="submit" class="btn btn-primary w-100">
+                                                <i class="bi bi-plus"></i> Añadir
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted mt-2 d-block">
+                                        <i class="bi bi-info-circle"></i> La fecha es opcional. Si no la pones, no tendrá recordatorio.
+                                    </small>
+                                </form>
                             </div>
                         </div>
 
-                        <!-- Lista de Tareas -->
+                        <!-- Alertas de próximas tareas -->
+                        <div class="alert alert-info d-flex align-items-center mb-3" id="upcomingAlert" style="display: none;">
+                            <i class="bi bi-bell me-2" style="font-size: 1.5rem;"></i>
+                            <div>
+                                <strong>Próximos vencimientos:</strong>
+                                <span id="upcomingCount">0</span> tareas para hoy/mañana
+                            </div>
+                        </div>
+
+                        <!-- Filtros -->
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-primary filter-btn active" data-filter="all">
+                                        <i class="bi bi-list-ul"></i> Todas
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="pending">
+                                        <i class="bi bi-clock"></i> Pendientes
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="completed">
+                                        <i class="bi bi-check-circle"></i> Completadas
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning filter-btn" data-filter="urgent">
+                                        <i class="bi bi-exclamation-triangle"></i> Urgentes
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="stats-box">
+                                    <span class="badge bg-primary p-2 me-2">
+                                        <i class="bi bi-list-task"></i> Total: <span id="totalTasks" class="fw-bold">0</span>
+                                    </span>
+                                    <span class="badge bg-success p-2">
+                                        <i class="bi bi-check2-circle"></i> Hechas: <span id="completedTasks" class="fw-bold">0</span>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Barra de progreso -->
+                        <div class="progress mb-3" style="height: 10px;">
+                            <div class="progress-bar bg-success" 
+                                 role="progressbar" 
+                                 style="width: 0%" 
+                                 id="progressBar"
+                                 aria-valuenow="0" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                        </div>
+
+                        <!-- Mensaje cuando no hay tareas -->
+                        <div id="emptyMessage" class="text-center text-muted mt-4" style="display: block;">
+                            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                            <p class="mt-2">No hay tareas. ¡Añade la primera!</p>
+                        </div>
+
+                        <!-- Lista de Tareas (INICIALMENTE VACÍA) -->
                         <div class="list-group" id="taskList">
-                            <!-- Tarea 1 -->
-                            <div class="list-group-item list-group-item-action border-0 mb-2 shadow-sm">
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <div class="form-check">
-                                        <input class="form-check-input task-checkbox" type="checkbox" id="task1">
-                                        <label class="form-check-label ms-2" for="task1">
-                                            <span class="task-title">Revisar el código del proyecto</span>
-                                            <span class="badge bg-danger ms-2">Urgente</span>
-                                        </label>
-                                    </div>
-                                    <div class="btn-group">
-                                        <button class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar"></i> Para hoy, 18:00
-                                </small>
-                            </div>
-
-                            <!-- Tarea 2 -->
-                            <div class="list-group-item list-group-item-action border-0 mb-2 shadow-sm">
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <div class="form-check">
-                                        <input class="form-check-input task-checkbox" type="checkbox" id="task2" checked>
-                                        <label class="form-check-label ms-2" for="task2">
-                                            <span class="task-title completed">Estudiar JavaScript avanzado</span>
-                                            <span class="badge bg-warning ms-2">Alta</span>
-                                        </label>
-                                    </div>
-                                    <div class="btn-group">
-                                        <button class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar-check"></i> Completada hoy, 14:30
-                                </small>
-                            </div>
-
-                            <!-- Tarea 3 -->
-                            <div class="list-group-item list-group-item-action border-0 mb-2 shadow-sm">
-                                <div class="d-flex w-100 justify-content-between align-items-center">
-                                    <div class="form-check">
-                                        <input class="form-check-input task-checkbox" type="checkbox" id="task3">
-                                        <label class="form-check-label ms-2" for="task3">
-                                            <span class="task-title">Reunión con el equipo</span>
-                                            <span class="badge bg-success ms-2">Media</span>
-                                        </label>
-                                    </div>
-                                    <div class="btn-group">
-                                        <button class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar"></i> Mañana, 10:00
-                                </small>
-                            </div>
+                            <!-- Las tareas se añadirán aquí dinámicamente -->
                         </div>
                     </div>
                 </div>
@@ -230,17 +212,17 @@
                     </div>
                     <div class="card-body">
                         <div class="progress mb-3" style="height: 20px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: 40%;">
-                                40%
+                            <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="mainProgressBar">
+                                0%
                             </div>
                         </div>
                         <div class="row text-center">
                             <div class="col-6">
-                                <h3 class="text-primary">12</h3>
+                                <h3 class="text-primary" id="sidebarTotalTasks">0</h3>
                                 <small class="text-muted">Total Tareas</small>
                             </div>
                             <div class="col-6">
-                                <h3 class="text-success">5</h3>
+                                <h3 class="text-success" id="sidebarCompletedTasks">0</h3>
                                 <small class="text-muted">Completadas</small>
                             </div>
                         </div>
@@ -256,37 +238,12 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item border-0">
-                                <i class="bi bi-calendar-event text-primary me-2"></i>
-                                <span>Presentación Proyecto</span>
-                                <small class="text-muted d-block">Mañana, 16:00</small>
-                            </li>
-                            <li class="list-group-item border-0">
-                                <i class="bi bi-calendar-event text-primary me-2"></i>
-                                <span>Revisión de Código</span>
-                                <small class="text-muted d-block">Viernes, 11:00</small>
+                        <ul class="list-group list-group-flush" id="upcomingTasksList">
+                            <li class="list-group-item border-0 text-muted">
+                                <i class="bi bi-info-circle me-2"></i>
+                                No hay tareas próximas
                             </li>
                         </ul>
-                    </div>
-                </div>
-
-                <!-- Card de Categorías -->
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white border-0">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-tags text-info me-2"></i>
-                            Categorías
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap gap-2">
-                            <span class="badge bg-primary p-2">Trabajo</span>
-                            <span class="badge bg-success p-2">Personal</span>
-                            <span class="badge bg-warning p-2">Estudio</span>
-                            <span class="badge bg-info p-2">Compras</span>
-                            <span class="badge bg-secondary p-2">Otros</span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -296,39 +253,6 @@
     <!-- Footer -->
     <footer class="bg-dark text-white py-4 mt-5">
         <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <h5 class="mb-3">
-                        <i class="bi bi-check2-circle"></i> TaskFlow
-                    </h5>
-                    <p class="text-muted">
-                        Organiza tu vida, aumenta tu productividad y alcanza tus metas con nuestra herramienta.
-                    </p>
-                </div>
-                <div class="col-md-4">
-                    <h5 class="mb-3">Enlaces Rápidos</h5>
-                    <ul class="list-unstyled">
-                        <li><a href="#" class="text-white-50 text-decoration-none">Acerca de</a></li>
-                        <li><a href="#" class="text-white-50 text-decoration-none">Funciones</a></li>
-                        <li><a href="#" class="text-white-50 text-decoration-none">Precios</a></li>
-                        <li><a href="#" class="text-white-50 text-decoration-none">Soporte</a></li>
-                    </ul>
-                </div>
-                <div class="col-md-4">
-                    <h5 class="mb-3">Contacto</h5>
-                    <ul class="list-unstyled">
-                        <li><i class="bi bi-envelope me-2"></i> soporte@taskflow.com</li>
-                        <li><i class="bi bi-telephone me-2"></i> +34 123 456 789</li>
-                    </ul>
-                    <div class="mt-3">
-                        <a href="#" class="text-white me-3"><i class="bi bi-twitter fs-5"></i></a>
-                        <a href="#" class="text-white me-3"><i class="bi bi-facebook fs-5"></i></a>
-                        <a href="#" class="text-white me-3"><i class="bi bi-linkedin fs-5"></i></a>
-                        <a href="#" class="text-white"><i class="bi bi-github fs-5"></i></a>
-                    </div>
-                </div>
-            </div>
-            <hr class="bg-secondary">
             <div class="text-center text-muted">
                 <small>© 2024 TaskFlow. Proyecto desarrollado para Ingeniería Web 1 - UAX.</small>
             </div>
@@ -340,5 +264,27 @@
     
     <!-- JavaScript Personalizado -->
     <script src="script.js"></script>
+    
+    <!-- Script de inicialización -->
+    <script>
+        // Configurar fecha mínima en el input de fecha
+        document.addEventListener('DOMContentLoaded', function() {
+            const dueDateInput = document.getElementById('taskDueDate');
+            if (dueDateInput) {
+                const now = new Date();
+                const formattedDate = now.toISOString().slice(0, 16);
+                dueDateInput.min = formattedDate;
+                
+                // Establecer mañana a las 12:00 como valor por defecto
+                const tomorrow = new Date(now);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(12, 0, 0, 0);
+                dueDateInput.value = tomorrow.toISOString().slice(0, 16);
+            }
+            
+            console.log('✅ TaskFlow cargado correctamente');
+            console.log('📝 Escribe una tarea y presiona "Añadir" para probar');
+        });
+    </script>
 </body>
 </html>
