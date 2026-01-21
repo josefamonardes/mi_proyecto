@@ -39,36 +39,69 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Función general para peticiones a la API
     async function apiRequest(endpoint, method = 'GET', data = null) {
-        if (!USE_API) {
-            throw new Error('API deshabilitada - usando modo local');
-        }
-        
-        const options = {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        };
-        
-        if (data) {
-            options.body = JSON.stringify(data);
-        }
-        
-        try {
-            const response = await fetch(`${API_BASE_URL}/${endpoint}.php`, options);
-            const result = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(result.error || 'Error en la API');
-            }
-            
-            return result;
-        } catch (error) {
-            console.error(`Error API (${endpoint}):`, error);
-            showAlert(`⚠️ Error API: ${error.message}`, 'warning');
-            throw error;
-        }
+    if (!USE_API) {
+        throw new Error('API deshabilitada - usando modo local');
     }
+    
+    console.log(`📤 API Request: ${method} ${endpoint}`, data);
+    
+    const options = {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    };
+    
+    // Para DELETE, POST, PUT: enviar data en el body
+    if (data && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
+        options.body = JSON.stringify(data);
+    }
+    
+    // Para GET con parámetros: añadir a la URL
+    if (data && method === 'GET') {
+        const params = new URLSearchParams(data).toString();
+        endpoint = `${endpoint}?${params}`;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/${endpoint}.php`, options);
+        
+        console.log(`📥 Response status: ${response.status} ${response.statusText}`);
+        
+        const text = await response.text();
+        console.log(`📥 Response text: ${text.substring(0, 200)}...`);
+        
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (parseError) {
+            console.error('❌ No es JSON válido:', text);
+            throw new Error(`El servidor devolvió respuesta inválida. ¿Error PHP?`);
+        }
+        
+        // Verificar éxito
+        if (!response.ok || result.success === false) {
+            const errorMsg = result.error || `Error ${response.status}`;
+            throw new Error(errorMsg);
+        }
+        
+        return result;
+        
+    } catch (error) {
+        console.error(`🔥 Error API (${endpoint}):`, error);
+        
+        // Mensaje para el usuario
+        let userMessage = error.message;
+        if (error.message.includes('El servidor devolvió respuesta inválida')) {
+            userMessage = 'Error en el servidor. Revisa la consola.';
+        } else if (error.message.includes('Failed to fetch')) {
+            userMessage = 'Error de conexión. ¿XAMPP está corriendo?';
+        }
+        
+        showAlert(`⚠️ ${userMessage}`, 'warning');
+        throw error;
+    }
+}
     
     // Cargar tareas desde API o localStorage
     async function loadTasks() {
@@ -424,17 +457,56 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Eliminar tarea
     async function deleteTaskHandler(taskId) {
-        if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+    console.log('🗑️ Intentando eliminar tarea ID:', taskId);
+    
+    if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
+        try {
+            // PRIMERO: Usar DELETE con body (la forma correcta)
+            console.log('1. Probando DELETE con body...');
+            const result = await apiRequest('delete', 'DELETE', { id: taskId });
+            
+            // Si llegamos aquí, fue exitoso
+            tasks = tasks.filter(t => t.id != taskId);
+            renderTasks();
+            showAlert('✅ Tarea eliminada correctamente', 'success');
+            
+        } catch (deleteError) {
+            console.log('DELETE falló, probando POST...', deleteError);
+            
             try {
-                await deleteTask(taskId);
+                // SEGUNDO: Intentar con POST (fallback)
+                console.log('2. Probando POST como fallback...');
+                const result = await apiRequest('delete', 'POST', { id: taskId });
+                
                 tasks = tasks.filter(t => t.id != taskId);
                 renderTasks();
-                showAlert('🗑️ Tarea eliminada', 'info');
-            } catch (error) {
-                showAlert('❌ Error al eliminar la tarea', 'danger');
+                showAlert('✅ Tarea eliminada (vía POST)', 'success');
+                
+            } catch (postError) {
+                console.log('POST también falló, probando GET...', postError);
+                
+                try {
+                    // TERCERO: Intentar con GET (último recurso)
+                    console.log('3. Probando GET como último recurso...');
+                    const result = await apiRequest('delete', 'GET', { id: taskId });
+                    
+                    tasks = tasks.filter(t => t.id != taskId);
+                    renderTasks();
+                    showAlert('✅ Tarea eliminada (vía GET)', 'success');
+                    
+                } catch (getError) {
+                    console.log('Todos los métodos fallaron:', getError);
+                    
+                    // CUARTO: Eliminar solo localmente
+                    tasks = tasks.filter(t => t.id != taskId);
+                    localStorage.setItem('taskflow_tasks', JSON.stringify(tasks));
+                    renderTasks();
+                    showAlert('⚠️ Tarea eliminada solo localmente (API no disponible)', 'warning');
+                }
             }
         }
     }
+}
     
     // Abrir modal de edición
     function openEditModal(taskId) {
