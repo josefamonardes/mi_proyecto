@@ -1,8 +1,8 @@
 <?php
 class Database {
     private $host = "localhost";
-    private $port = "3307";  // ← PUERTO 3307
-    private $db_name = "taskflow_db";
+    private $port = "3306";  
+    private $db_name = "mi_proyecto_db";
     private $username = "root";
     private $password = "";
     public $conn;
