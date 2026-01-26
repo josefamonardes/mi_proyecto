@@ -1,342 +1,129 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskFlow - Gestor de Tareas Inteligente</title>
-    
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    
-    <!-- CSS Personalizado -->
-    <link rel="stylesheet" href="style.css">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="https://img.icons8.com/color/96/000000/task.png">
-    
-    <style>
-        /* Estilos temporales para que funcione */
-        .task-completed {
-            text-decoration: line-through;
-            color: #6c757d !important;
-            opacity: 0.7;
-        }
-        
-        .animate-float {
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-15px); }
-        }
-        
-        .bg-gradient-primary {
-            background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%) !important;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TaskFlow</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="style.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    /* Mantengo algunos estilos inline que estabas usando */
+    .bg-gradient-primary {
+      background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%) !important;
+    }
+  </style>
 </head>
 <body>
-    <!-- Autenticación: registro / login -->
-<section id="authSection" class="container py-4">
-  <div class="row">
-    <div class="col-md-6">
-      <h4>Registro</h4>
-      <form id="registerForm" class="mb-3">
-        <div class="mb-2">
-          <label for="reg_username" class="form-label">Usuario</label>
-          <input id="reg_username" name="username" class="form-control" required minlength="3" />
+  <!-- Navegación -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
+    <div class="container">
+      <a class="navbar-brand fw-bold" href="#">
+        <i class="bi bi-check2-circle me-2"></i> TaskFlow
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item"><a class="nav-link active" href="#"><i class="bi bi-house-door"></i> Inicio</a></li>
+          <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-list-task"></i> Mis Tareas</a></li>
+          <li class="nav-item"><a class="nav-link" href="auth.html"><i class="bi bi-person"></i> Iniciar sesión</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Header/Hero Section -->
+  <header class="bg-gradient-primary text-white py-5 mb-5">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-8">
+          <h1 class="display-4 fw-bold mb-3">
+            <i class="bi bi-check2-all"></i> Organiza Tu Día con TaskFlow
+          </h1>
+          <p class="lead">Una pequeña app para gestionar tus tareas con filtros, prioridades y persistencia.</p>
         </div>
-        <div class="mb-2">
-          <label for="reg_email" class="form-label">Email</label>
-          <input id="reg_email" name="email" type="email" class="form-control" required />
+      </div>
+    </div>
+  </header>
+
+  <!-- App: se oculta si no está autenticado -->
+  <section id="appSection" style="display:none;">
+    <div class="container py-3 d-flex justify-content-between align-items-center">
+      <div>
+        <strong>Bienvenido, <span id="whoami"></span></strong>
+      </div>
+      <div>
+        <button id="logoutBtn" class="btn btn-outline-secondary">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <div class="container mb-4">
+      <!-- Formulario para añadir tareas -->
+      <form id="taskForm" class="row g-2 align-items-center mb-3">
+        <div class="col-md-6">
+          <input id="taskInput" class="form-control" placeholder="Nueva tarea..." required />
         </div>
-        <div class="mb-2">
-          <label for="reg_password" class="form-label">Contraseña</label>
-          <input id="reg_password" name="password" type="password" class="form-control" required minlength="6" />
+        <div class="col-md-2">
+          <select id="prioritySelect" class="form-select">
+            <option value="baja">Baja</option>
+            <option value="media" selected>Media</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente</option>
+          </select>
         </div>
-        <button class="btn btn-primary" type="submit">Registrar</button>
+        <div class="col-md-3">
+          <input id="taskDueDate" type="datetime-local" class="form-control" />
+        </div>
+        <div class="col-md-1">
+          <button class="btn btn-primary w-100" type="submit">Añadir</button>
+        </div>
       </form>
+
+      <!-- Filtros simples -->
+      <div class="mb-3">
+        <div class="btn-group" role="group" id="filterGroup">
+          <button class="btn btn-outline-secondary active" data-filter="all">Todas</button>
+          <button class="btn btn-outline-secondary" data-filter="pending">Pendientes</button>
+          <button class="btn btn-outline-secondary" data-filter="completed">Completadas</button>
+          <button class="btn btn-outline-secondary" data-filter="urgent">Urgentes</button>
+        </div>
+      </div>
+
+      <!-- Lista de tareas -->
+      <div id="tasksList" class="list-group"></div>
     </div>
+  </section>
 
-    <div class="col-md-6">
-      <h4>Acceso</h4>
-      <form id="loginForm" class="mb-3">
-        <div class="mb-2">
-          <label for="login_identifier" class="form-label">Usuario o email</label>
-          <input id="login_identifier" name="identifier" class="form-control" required />
-        </div>
-        <div class="mb-2">
-          <label for="login_password" class="form-label">Contraseña</label>
-          <input id="login_password" name="password" type="password" class="form-control" required />
-        </div>
-        <button class="btn btn-success" type="submit">Iniciar sesión</button>
-      </form>
+  <!-- Footer -->
+  <footer class="bg-dark text-white py-4 mt-5">
+    <div class="container">
+      <div class="text-center text-muted">
+        <small>© 2024 TaskFlow. Proyecto desarrollado para Ingeniería Web 1 - UAX.</small>
+      </div>
     </div>
-  </div>
-</section>
+  </footer>
 
-<!-- App: se oculta si no está autenticado -->
-<section id="appSection" style="display:none;">
-  <div class="container py-3 d-flex justify-content-between align-items-center">
-    <div>
-      <strong>Bienvenido, <span id="whoami"></span></strong>
-    </div>
-    <div>
-      <button id="logoutBtn" class="btn btn-outline-secondary">Cerrar sesión</button>
-    </div>
-  </div>
+  <!-- Scripts -->
+  <script src="script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-  <!-- Aquí va el resto de tu app (formulario de tareas, lista, sidebar...) -->
-</section>
-    <!-- Navegación -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="#">
-                <i class="bi bi-check2-circle me-2"></i>
-                TaskFlow
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#"><i class="bi bi-house-door"></i> Inicio</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#"><i class="bi bi-list-task"></i> Mis Tareas</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Header/Hero Section -->
-    <header class="bg-gradient-primary text-white py-5 mb-5">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-8">
-                    <h1 class="display-4 fw-bold mb-3">
-                        <i class="bi bi-check2-all"></i> Organiza Tu Día con TaskFlow
-                    </h1>
-                    <p class="lead mb-4">
-                        Gestiona tus tareas de manera eficiente, establece prioridades y alcanza tus objetivos diarios.
-                    </p>
-                </div>
-                <div class="col-lg-4 text-center">
-                    <img src="https://img.icons8.com/color/300/000000/task.png" 
-                         alt="Ilustración de tareas" 
-                         class="img-fluid animate-float">
-                </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Contenido Principal -->
-    <main class="container">
-        <div class="row">
-            <!-- Panel de Tareas -->
-            <div class="col-lg-8">
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white border-0 py-3">
-                        <h3 class="card-title mb-0">
-                            <i class="bi bi-list-check text-primary me-2"></i>
-                            Mis Tareas del Día
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <!-- FORMULARIO CORREGIDO (SOLO UNO) -->
-                        <div class="card mb-4">
-                            <div class="card-body">
-                                <form id="taskForm">
-                                    <div class="row g-2">
-                                        <div class="col-md-5">
-                                            <input type="text" 
-                                                   class="form-control" 
-                                                   id="taskInput" 
-                                                   placeholder="¿Qué necesitas hacer?"
-                                                   required>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <select class="form-select" id="prioritySelect">
-                                                <option value="baja">Baja</option>
-                                                <option value="media" selected>Media</option>
-                                                <option value="alta">Alta</option>
-                                                <option value="urgente">Urgente</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <input type="datetime-local" 
-                                                   class="form-control" 
-                                                   id="taskDueDate">
-                                        </div>
-                                        <div class="col-md-2">
-                                            <button type="submit" class="btn btn-primary w-100">
-                                                <i class="bi bi-plus"></i> Añadir
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <small class="text-muted mt-2 d-block">
-                                        <i class="bi bi-info-circle"></i> La fecha es opcional. Si no la pones, no tendrá recordatorio.
-                                    </small>
-                                </form>
-                            </div>
-                        </div>
-
-                        <!-- Alertas de próximas tareas -->
-                        <div class="alert alert-info d-flex align-items-center mb-3" id="upcomingAlert" style="display: none;">
-                            <i class="bi bi-bell me-2" style="font-size: 1.5rem;"></i>
-                            <div>
-                                <strong>Próximos vencimientos:</strong>
-                                <span id="upcomingCount">0</span> tareas para hoy/mañana
-                            </div>
-                        </div>
-
-                        <!-- Filtros -->
-                        <div class="row mb-4">
-                            <div class="col-md-8">
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-outline-primary filter-btn active" data-filter="all">
-                                        <i class="bi bi-list-ul"></i> Todas
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="pending">
-                                        <i class="bi bi-clock"></i> Pendientes
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary filter-btn" data-filter="completed">
-                                        <i class="bi bi-check-circle"></i> Completadas
-                                    </button>
-                                    <button type="button" class="btn btn-outline-warning filter-btn" data-filter="urgent">
-                                        <i class="bi bi-exclamation-triangle"></i> Urgentes
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <div class="stats-box">
-                                    <span class="badge bg-primary p-2 me-2">
-                                        <i class="bi bi-list-task"></i> Total: <span id="totalTasks" class="fw-bold">0</span>
-                                    </span>
-                                    <span class="badge bg-success p-2">
-                                        <i class="bi bi-check2-circle"></i> Hechas: <span id="completedTasks" class="fw-bold">0</span>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Barra de progreso -->
-                        <div class="progress mb-3" style="height: 10px;">
-                            <div class="progress-bar bg-success" 
-                                 role="progressbar" 
-                                 style="width: 0%" 
-                                 id="progressBar"
-                                 aria-valuenow="0" 
-                                 aria-valuemin="0" 
-                                 aria-valuemax="100">
-                            </div>
-                        </div>
-
-                        <!-- Mensaje cuando no hay tareas -->
-                        <div id="emptyMessage" class="text-center text-muted mt-4" style="display: block;">
-                            <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-                            <p class="mt-2">No hay tareas. ¡Añade la primera!</p>
-                        </div>
-
-                        <!-- Lista de Tareas (INICIALMENTE VACÍA) -->
-                        <div class="list-group" id="taskList">
-                            <!-- Las tareas se añadirán aquí dinámicamente -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sidebar con Estadísticas -->
-            <div class="col-lg-4">
-                <!-- Card de Estadísticas -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white border-0">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-graph-up text-primary me-2"></i>
-                            Tu Progreso
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="progress mb-3" style="height: 20px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="mainProgressBar">
-                                0%
-                            </div>
-                        </div>
-                        <div class="row text-center">
-                            <div class="col-6">
-                                <h3 class="text-primary" id="sidebarTotalTasks">0</h3>
-                                <small class="text-muted">Total Tareas</small>
-                            </div>
-                            <div class="col-6">
-                                <h3 class="text-success" id="sidebarCompletedTasks">0</h3>
-                                <small class="text-muted">Completadas</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card de Próximas Tareas -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white border-0">
-                        <h5 class="card-title mb-0">
-                            <i class="bi bi-alarm text-warning me-2"></i>
-                            Próximas Fechas
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush" id="upcomingTasksList">
-                            <li class="list-group-item border-0 text-muted">
-                                <i class="bi bi-info-circle me-2"></i>
-                                No hay tareas próximas
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-dark text-white py-4 mt-5">
-        <div class="container">
-            <div class="text-center text-muted">
-                <small>© 2024 TaskFlow. Proyecto desarrollado para Ingeniería Web 1 - UAX.</small>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Bootstrap JS Bundle con Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- JavaScript Personalizado -->
-    <script src="script.js"></script>
-    
-    <!-- Script de inicialización -->
-    <script>
-        // Configurar fecha mínima en el input de fecha
-        document.addEventListener('DOMContentLoaded', function() {
-            const dueDateInput = document.getElementById('taskDueDate');
-            if (dueDateInput) {
-                const now = new Date();
-                const formattedDate = now.toISOString().slice(0, 16);
-                dueDateInput.min = formattedDate;
-                
-                // Establecer mañana a las 12:00 como valor por defecto
-                const tomorrow = new Date(now);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                tomorrow.setHours(12, 0, 0, 0);
-                dueDateInput.value = tomorrow.toISOString().slice(0, 16);
-            }
-            
-            console.log('✅ TaskFlow cargado correctamente');
-            console.log('📝 Escribe una tarea y presiona "Añadir" para probar');
-        });
-    </script>
+  <!-- Inicialización extra (fecha mínima en input de fecha) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const dueDateInput = document.getElementById('taskDueDate');
+      if (dueDateInput) {
+        const now = new Date();
+        const formattedDate = now.toISOString().slice(0, 16);
+        dueDateInput.min = formattedDate;
+        // por defecto: mañana medio día
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(12,0,0,0);
+        dueDateInput.value = tomorrow.toISOString().slice(0,16);
+      }
+    });
+  </script>
 </body>
 </html>
