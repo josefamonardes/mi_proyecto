@@ -1,817 +1,693 @@
-// script.js - VERSIÓN COMPLETA CON API PHP/MySQL
+// script.js - Versión final integrada
+// - Combina la antigua versión completa (UI avanzada, localStorage fallback, filtros, progreso)
+//   con las nuevas funciones de autenticación (register/login/logout) y uso de sesiones PHP.
+// - No debe interferir con formularios cliente: si los formularios de auth no existen, el código los ignora.
+// - Asegúrate de que tu backend usa los endpoints:
+//     /mi_proyecto/api/tasks/*.php
+//     /mi_proyecto/api/auth/*.php
+// - Las peticiones que usan sesiones envían cookies: credentials: 'include'
 
 document.addEventListener('DOMContentLoaded', function() {
-    // ====================
-    // CONFIGURACIÓN
-    // ====================
-    const API_BASE_URL = 'http://localhost/mi_proyecto/api/tasks';
-    const USE_API = true; // Cambiar a false para usar solo localStorage
-    
-    // ====================
-    // ELEMENTOS DEL DOM
-    // ====================
-    const taskForm = document.getElementById('taskForm');
-    const taskInput = document.getElementById('taskInput');
-    const prioritySelect = document.getElementById('prioritySelect');
-    const dueDateInput = document.getElementById('taskDueDate');
-    const taskList = document.getElementById('taskList');
-    const emptyMessage = document.getElementById('emptyMessage');
-    const totalTasksSpan = document.getElementById('totalTasks');
-    const completedTasksSpan = document.getElementById('completedTasks');
-    const upcomingAlert = document.getElementById('upcomingAlert');
-    const upcomingCount = document.getElementById('upcomingCount');
-    const filterButtons = document.querySelectorAll('.filter-btn');
-    const progressBar = document.getElementById('progressBar');
-    const mainProgressBar = document.getElementById('mainProgressBar');
-    const sidebarTotalTasks = document.getElementById('sidebarTotalTasks');
-    const sidebarCompletedTasks = document.getElementById('sidebarCompletedTasks');
-    const upcomingTasksList = document.getElementById('upcomingTasksList');
-    
-    // ====================
-    // VARIABLES GLOBALES
-    // ====================
-    let tasks = [];
-    let currentFilter = 'all';
-    
-    // ====================
-    // FUNCIONES DE LA API
-    // ====================
-    
-    // Función general para peticiones a la API
-    async function apiRequest(endpoint, method = 'GET', data = null) {
-    if (!USE_API) {
-        throw new Error('API deshabilitada - usando modo local');
+  // ====================
+  // CONFIGURACIÓN
+  // ====================
+  const API_BASE_URL = '/mi_proyecto/api/tasks'; // endpoint de tareas
+  const AUTH_BASE_URL = '/mi_proyecto/api/auth'; // endpoint auth
+  const USE_API = true; // Cambiar a false para usar solo localStorage
+
+  // ====================
+  // SELECTORES DOM
+  // ====================
+  const taskForm = document.getElementById('taskForm');
+  const taskInput = document.getElementById('taskInput');
+  const prioritySelect = document.getElementById('prioritySelect');
+  const dueDateInput = document.getElementById('taskDueDate');
+  const taskList = document.getElementById('taskList');
+  const emptyMessage = document.getElementById('emptyMessage');
+  const totalTasksSpan = document.getElementById('totalTasks');
+  const completedTasksSpan = document.getElementById('completedTasks');
+  const upcomingAlert = document.getElementById('upcomingAlert');
+  const upcomingCount = document.getElementById('upcomingCount');
+  const filterButtons = document.querySelectorAll('.filter-btn');
+  const progressBar = document.getElementById('progressBar');
+  const mainProgressBar = document.getElementById('mainProgressBar');
+  const sidebarTotalTasks = document.getElementById('sidebarTotalTasks');
+  const sidebarCompletedTasks = document.getElementById('sidebarCompletedTasks');
+  const upcomingTasksList = document.getElementById('upcomingTasksList');
+
+  // Auth elements (optional)
+  const registerForm = document.getElementById('registerForm');
+  const loginForm = document.getElementById('loginForm');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const authSection = document.getElementById('authSection');
+  const appSection = document.getElementById('appSection');
+  const whoami = document.getElementById('whoami');
+
+  // ====================
+  // VARIABLES GLOBALES
+  // ====================
+  let tasks = [];
+  let currentFilter = 'all';
+  let currentUser = null;
+
+  // ====================
+  // HELPERS FETCH/JSON (incluye cookies)
+  // ====================
+  async function fetchJson(url, options = {}) {
+    const opts = Object.assign({
+      credentials: 'include',
+      headers: { 'Accept': 'application/json' }
+    }, options);
+
+    if (opts.body && !(opts.body instanceof FormData) && typeof opts.body !== 'string') {
+      opts.headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
+      opts.body = JSON.stringify(opts.body);
     }
-    
-    console.log(`📤 API Request: ${method} ${endpoint}`, data);
-    
-    const options = {
-        method: method,
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    };
-    
-    // Para DELETE, POST, PUT: enviar data en el body
-    if (data && (method === 'POST' || method === 'PUT' || method === 'DELETE')) {
-        options.body = JSON.stringify(data);
-    }
-    
-    // Para GET con parámetros: añadir a la URL
-    if (data && method === 'GET') {
-        const params = new URLSearchParams(data).toString();
-        endpoint = `${endpoint}?${params}`;
-    }
-    
+
+    const res = await fetch(url, opts);
+    const text = await res.text();
+
+    let data = null;
     try {
-        const response = await fetch(`${API_BASE_URL}/${endpoint}.php`, options);
-        
-        console.log(`📥 Response status: ${response.status} ${response.statusText}`);
-        
-        const text = await response.text();
-        console.log(`📥 Response text: ${text.substring(0, 200)}...`);
-        
-        let result;
-        try {
-            result = JSON.parse(text);
-        } catch (parseError) {
-            console.error('❌ No es JSON válido:', text);
-            throw new Error(`El servidor devolvió respuesta inválida. ¿Error PHP?`);
-        }
-        
-        // Verificar éxito
-        if (!response.ok || result.success === false) {
-            const errorMsg = result.error || `Error ${response.status}`;
-            throw new Error(errorMsg);
-        }
-        
-        return result;
-        
+      data = text ? JSON.parse(text) : null;
+    } catch (e) {
+      const err = new Error('El servidor devolvió respuesta inválida. ¿Error PHP?');
+      err.status = res.status;
+      err.raw = text;
+      throw err;
+    }
+
+    if (!res.ok) {
+      const msg = data && data.error ? data.error : `HTTP ${res.status}`;
+      const err = new Error(msg);
+      err.status = res.status;
+      err.body = data;
+      throw err;
+    }
+
+    return data;
+  }
+
+  // ====================
+  // API request (tareas)
+  // ====================
+  async function apiRequest(endpoint, method = 'GET', data = null) {
+    if (!USE_API) throw new Error('API deshabilitada - usando modo local');
+
+    console.log(`📤 API Request: ${method} ${endpoint}`, data);
+    let url = `${API_BASE_URL}/${endpoint}.php`;
+    const options = { method };
+
+    if (method === 'GET' && data) {
+      url += `?${new URLSearchParams(data).toString()}`;
+    } else if (data) {
+      options.body = data; // fetchJson hará stringify si es necesario
+    }
+
+    try {
+      const result = await fetchJson(url, options);
+      // Compatibilidad con varios formatos de respuesta
+      // puede venir { tasks: [...] } o { data: [...] } o { task: {...} }
+      return result;
     } catch (error) {
-        console.error(`🔥 Error API (${endpoint}):`, error);
-        
-        // Mensaje para el usuario
-        let userMessage = error.message;
-        if (error.message.includes('El servidor devolvió respuesta inválida')) {
-            userMessage = 'Error en el servidor. Revisa la consola.';
-        } else if (error.message.includes('Failed to fetch')) {
-            userMessage = 'Error de conexión. ¿XAMPP está corriendo?';
-        }
-        
-        showAlert(`⚠️ ${userMessage}`, 'warning');
-        throw error;
+      console.error(`🔥 Error API (${endpoint}):`, error);
+      let userMessage = error.message;
+      if (error.message.includes('El servidor devolvió respuesta inválida')) {
+        userMessage = 'Error en el servidor. Revisa la consola.';
+      } else if (error.message.includes('Failed to fetch')) {
+        userMessage = 'Error de conexión. ¿XAMPP está corriendo?';
+      }
+      showAlert(`⚠️ ${userMessage}`, 'warning');
+      throw error;
     }
-}
-    
-    // Cargar tareas desde API o localStorage
-    async function loadTasks() {
-        if (USE_API) {
-            try {
-                const result = await apiRequest('read');
-                tasks = result.data || [];
-                showAlert(`✅ ${tasks.length} tareas cargadas desde el servidor`, 'success');
-            } catch (error) {
-                // Fallback a localStorage
-                tasks = JSON.parse(localStorage.getItem('taskflow_tasks')) || [];
-                if (tasks.length > 0) {
-                    showAlert('Usando datos locales (API no disponible)', 'info');
-                }
-            }
-        } else {
-            tasks = JSON.parse(localStorage.getItem('taskflow_tasks')) || [];
-        }
-        
-        renderTasks();
-        updateStats();
-        updateUpcomingAlert();
-    }
-    
-    // Guardar tarea en API o localStorage
-    async function saveTask(task) {
-        if (USE_API) {
-            try {
-                const result = await apiRequest('create', 'POST', {
-                    title: task.text,
-                    description: task.description || '',
-                    priority: task.priority,
-                    due_date: task.dueDate || null,
-                    completed: task.completed || false
-                });
-                
-                if (result.task) {
-                    return { ...task, ...result.task };
-                }
-            } catch (error) {
-                // Continuar para guardar en localStorage
-            }
-        }
-        
-        // Guardar en localStorage (fallback o modo local)
-        const tasks = JSON.parse(localStorage.getItem('taskflow_tasks')) || [];
-        tasks.push(task);
-        localStorage.setItem('taskflow_tasks', JSON.stringify(tasks));
-        return task;
-    }
-    
-    // Actualizar tarea en API o localStorage
-    async function updateTask(task) {
-        if (USE_API) {
-            try {
-                await apiRequest('update', 'PUT', {
-                    id: task.id,
-                    title: task.text,
-                    description: task.description || '',
-                    priority: task.priority,
-                    due_date: task.dueDate || null,
-                    completed: task.completed
-                });
-                return true;
-            } catch (error) {
-                // Continuar para actualizar en localStorage
-            }
-        }
-        
-        // Actualizar en localStorage
-        const allTasks = JSON.parse(localStorage.getItem('taskflow_tasks')) || [];
-        const updatedTasks = allTasks.map(t => t.id === task.id ? task : t);
-        localStorage.setItem('taskflow_tasks', JSON.stringify(updatedTasks));
-        return true;
-    }
-    
-    // Eliminar tarea de API o localStorage
-    async function deleteTask(taskId) {
-        if (USE_API) {
-            try {
-                await apiRequest('delete', 'DELETE', { id: taskId });
-                return true;
-            } catch (error) {
-                // Continuar para eliminar de localStorage
-            }
-        }
-        
-        // Eliminar de localStorage
-        const allTasks = JSON.parse(localStorage.getItem('taskflow_tasks')) || [];
-        const filteredTasks = allTasks.filter(t => t.id !== taskId);
-        localStorage.setItem('taskflow_tasks', JSON.stringify(filteredTasks));
-        return true;
-    }
-    
-    // ====================
-    // FUNCIONES PRINCIPALES
-    // ====================
-    
-    // Añadir nueva tarea
-    async function addTask() {
-        const text = taskInput.value.trim();
-        const priority = prioritySelect.value;
-        const dueDate = dueDateInput.value;
-        
-        // Validación
-        if (!text) {
-            showAlert('⚠️ Escribe una tarea primero', 'warning');
-            taskInput.focus();
-            return;
-        }
-        
-        // Crear objeto tarea
-        const task = {
-            id: Date.now(), // Temporal, la API asignará uno real
-            text: text,
-            description: '',
-            priority: priority,
-            dueDate: dueDate || null,
-            completed: false,
-            createdAt: new Date().toISOString()
+  }
+
+  // ====================
+  // AUTH API helpers
+  // ====================
+  async function authRequest(endpoint, method = 'POST', data = null) {
+    if (!USE_API) throw new Error('Auth no disponible en modo local');
+    const url = `${AUTH_BASE_URL}/${endpoint}.php`;
+    const options = { method };
+    if (data) options.body = data;
+    return fetchJson(url, options);
+  }
+
+  async function registerUser(username, email, password) {
+    return authRequest('register', 'POST', { username, email, password });
+  }
+
+  async function loginUser(identifier, password) {
+    return authRequest('login', 'POST', { identifier, password });
+  }
+
+  async function logoutUser() {
+    return authRequest('logout', 'POST', {});
+  }
+
+  // ====================
+  // LOCALSTORAGE helpers
+  // ====================
+  function localLoadTasks() {
+    return JSON.parse(localStorage.getItem('taskflow_tasks') || '[]');
+  }
+  function localSaveTasksArray(arr) {
+    localStorage.setItem('taskflow_tasks', JSON.stringify(arr));
+  }
+
+  // ====================
+  // CRUD (save/update/delete) con fallback
+  // ====================
+  async function saveTask(task) {
+    if (USE_API) {
+      try {
+        const payload = {
+          title: task.text || task.title,
+          description: task.description || '',
+          priority: task.priority || 'media',
+          due_date: task.dueDate || task.due_date || null,
+          completed: task.completed ? 1 : 0
         };
-        
+        const res = await apiRequest('create', 'POST', payload);
+        const created = res.task || res.data || res;
+        return Object.assign({}, task, created);
+      } catch (err) {
+        console.warn('saveTask: fallback local por error API', err);
+        // si la API falla por 401 (no autenticado) propagamos para que UI actúe
+        if (err.status === 401) throw err;
+      }
+    }
+    // fallback local
+    const arr = localLoadTasks();
+    arr.push(task);
+    localSaveTasksArray(arr);
+    return task;
+  }
+
+  async function updateTask(task) {
+    if (USE_API) {
+      try {
+        const payload = {
+          id: task.id,
+          title: task.text || task.title,
+          description: task.description || '',
+          priority: task.priority || 'media',
+          due_date: task.dueDate || task.due_date || null,
+          completed: task.completed ? 1 : 0
+        };
+        await apiRequest('update', 'PUT', payload);
+        return true;
+      } catch (err) {
+        console.warn('updateTask fallo, fallback local', err);
+        if (err.status === 401) throw err;
+      }
+    }
+    // fallback local update
+    const all = localLoadTasks();
+    const updated = all.map(t => (t.id == task.id ? task : t));
+    localSaveTasksArray(updated);
+    return true;
+  }
+
+  async function deleteTaskRemote(taskId) {
+    if (USE_API) {
+      try {
+        await apiRequest('delete', 'DELETE', { id: taskId });
+        return true;
+      } catch (err) {
+        console.warn('deleteTaskRemote DELETE fallo, probando fallbacks', err);
         try {
-            // Guardar tarea
-            const savedTask = await saveTask(task);
-            
-            // Añadir al array local
-            tasks.push(savedTask);
-            
-            // Renderizar y limpiar formulario
-            renderTasks();
-            resetForm();
-            
-            showAlert('✅ Tarea añadida correctamente', 'success');
-            
-        } catch (error) {
-            showAlert('❌ Error al guardar la tarea', 'danger');
+          await apiRequest('delete', 'POST', { id: taskId });
+          return true;
+        } catch (err2) {
+          console.warn('deleteTaskRemote POST fallo, probando GET', err2);
+          try {
+            await apiRequest('delete', 'GET', { id: taskId });
+            return true;
+          } catch (err3) {
+            console.warn('deleteTaskRemote: todos los fallbacks fallaron', err3);
+          }
         }
+      }
     }
-    
-    // Renderizar todas las tareas
-    function renderTasks() {
-        // Limpiar lista
-        taskList.innerHTML = '';
-        
-        // Filtrar tareas según el filtro actual
-        let filteredTasks = tasks;
-        switch(currentFilter) {
-            case 'pending':
-                filteredTasks = tasks.filter(t => !t.completed);
-                break;
-            case 'completed':
-                filteredTasks = tasks.filter(t => t.completed);
-                break;
-            case 'urgent':
-                filteredTasks = tasks.filter(t => t.priority === 'urgente' && !t.completed);
-                break;
-        }
-        
-        // Ordenar tareas
-        filteredTasks.sort((a, b) => {
-            // Primero no completadas
-            if (a.completed !== b.completed) {
-                return a.completed ? 1 : -1;
-            }
-            
-            // Luego por prioridad
-            const priorityOrder = { 'urgente': 1, 'alta': 2, 'media': 3, 'baja': 4 };
-            if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-                return priorityOrder[a.priority] - priorityOrder[b.priority];
-            }
-            
-            // Luego por fecha
-            if (a.dueDate && b.dueDate) {
-                return new Date(a.dueDate) - new Date(b.dueDate);
-            }
-            
-            // Sin fecha al final
-            if (a.dueDate && !b.dueDate) return -1;
-            if (!a.dueDate && b.dueDate) return 1;
-            
-            // Por fecha de creación
-            return new Date(b.createdAt) - new Date(a.createdAt);
-        });
-        
-        // Crear elementos HTML
-        if (filteredTasks.length === 0) {
-            emptyMessage.style.display = 'block';
-        } else {
-            emptyMessage.style.display = 'none';
-            filteredTasks.forEach(task => {
-                const taskElement = createTaskElement(task);
-                taskList.appendChild(taskElement);
-            });
-        }
-        
-        updateStats();
-        updateUpcomingAlert();
-        updateUpcomingTasksList();
+    // fallback local
+    const all = localLoadTasks();
+    const filtered = all.filter(t => t.id != taskId);
+    localSaveTasksArray(filtered);
+    return true;
+  }
+
+  // ====================
+  // FUNCIONES PRINCIPALES
+  // ====================
+  async function addTask() {
+    const text = taskInput.value.trim();
+    const priority = prioritySelect.value;
+    const dueDate = dueDateInput.value || null;
+
+    if (!text) {
+      showAlert('⚠️ Escribe una tarea primero', 'warning');
+      taskInput.focus();
+      return;
     }
-    
-    // Crear elemento HTML para una tarea
-    function createTaskElement(task) {
-        const div = document.createElement('div');
-        div.className = 'list-group-item task-item';
-        div.dataset.id = task.id;
-        div.dataset.priority = task.priority;
-        
-        // Determinar clases CSS según fecha
-        const dateClasses = getDateStatusClasses(task.dueDate, task.completed);
-        
-        // Mapeo de colores para prioridades
-        const priorityColors = {
-            'baja': 'secondary',
-            'media': 'success',
-            'alta': 'warning',
-            'urgente': 'danger'
-        };
-        
-        const priorityTexts = {
-            'baja': 'Baja',
-            'media': 'Media',
-            'alta': 'Alta',
-            'urgente': 'Urgente'
-        };
-        
-        const priorityColor = priorityColors[task.priority];
-        const priorityText = priorityTexts[task.priority];
-        
-        // Formatear fecha si existe
-        let dueDateHtml = '';
-        if (task.dueDate) {
-            const dueDate = new Date(task.dueDate);
-            const formattedDueDate = dueDate.toLocaleDateString('es-ES', {
-                weekday: 'short',
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            
-            const timeLeft = getTimeLeft(dueDate);
-            dueDateHtml = `
-                <div class="mt-1">
-                    <span class="badge ${dateClasses.badgeClass} date-badge">
-                        <i class="bi bi-calendar${dateClasses.icon}"></i> ${timeLeft}
-                    </span>
-                    <small class="text-muted ms-2">${formattedDueDate}</small>
-                </div>
-            `;
-        }
-        
-        // Fecha de creación
-        const createdDate = new Date(task.createdAt || task.created_at);
-        const formattedCreatedDate = createdDate.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-        
-        // HTML de la tarea
-        div.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center ${dateClasses.taskClass}">
-                <div class="d-flex align-items-center" style="flex-grow: 1;">
-                    <div class="form-check me-3">
-                        <input class="form-check-input task-checkbox" 
-                               type="checkbox" 
-                               id="task-${task.id}"
-                               ${task.completed ? 'checked' : ''}>
-                    </div>
-                    <div style="flex-grow: 1;">
-                        <div class="d-flex align-items-center">
-                            <label class="form-check-label ${task.completed ? 'task-completed' : ''}" 
-                                   for="task-${task.id}">
-                                ${escapeHtml(task.text || task.title)}
-                            </label>
-                            <span class="badge bg-${priorityColor} priority-badge ms-2">
-                                ${priorityText}
-                            </span>
-                        </div>
-                        ${dueDateHtml}
-                        <small class="text-muted">
-                            <i class="bi bi-clock"></i> Creada: ${formattedCreatedDate}
-                        </small>
-                        ${task.completed ? 
-                            `<small class="text-success ms-2">
-                                <i class="bi bi-check-circle"></i> Completada
-                            </small>` : ''}
-                    </div>
-                </div>
-                <div class="btn-group" role="group">
-                    <button class="btn btn-sm btn-outline-primary edit-btn" 
-                            data-id="${task.id}"
-                            title="Editar tarea">
-                        <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger delete-btn" 
-                            data-id="${task.id}"
-                            title="Eliminar tarea">
-                        <i class="bi bi-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        // Añadir clases CSS según estado de fecha
-        if (dateClasses.taskClass) {
-            const innerDiv = div.querySelector('.d-flex.justify-content-between');
-            innerDiv.classList.add(...dateClasses.taskClass.split(' '));
-        }
-        
-        // Añadir event listeners
-        addTaskEvents(div, task.id);
-        
-        return div;
+
+    const task = {
+      id: Date.now(),
+      text,
+      title: text,
+      description: '',
+      priority,
+      dueDate,
+      due_date: dueDate,
+      completed: 0,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      const saved = await saveTask(task);
+      tasks.push(saved);
+      renderTasks();
+      resetForm();
+      showAlert('✅ Tarea añadida correctamente', 'success');
+    } catch (err) {
+      if (err.status === 401) {
+        showAlert('Necesitas iniciar sesión para crear tareas', 'warning');
+        showLoggedOut();
+        return;
+      }
+      showAlert('❌ Error al guardar la tarea', 'danger');
     }
-    
-    // Añadir eventos a un elemento de tarea
-    function addTaskEvents(taskElement, taskId) {
-        const checkbox = taskElement.querySelector('.task-checkbox');
-        const editBtn = taskElement.querySelector('.edit-btn');
-        const deleteBtn = taskElement.querySelector('.delete-btn');
-        
-        checkbox.addEventListener('change', async () => {
-            await toggleTaskComplete(taskId, checkbox.checked);
-        });
-        
-        editBtn.addEventListener('click', () => {
-            openEditModal(taskId);
-        });
-        
-        deleteBtn.addEventListener('click', async () => {
-            await deleteTaskHandler(taskId);
-        });
-    }
-    
-    // Cambiar estado de completado
-    async function toggleTaskComplete(taskId, completed) {
-        const taskIndex = tasks.findIndex(t => t.id == taskId);
-        
-        if (taskIndex !== -1) {
-            tasks[taskIndex].completed = completed;
-            
-            try {
-                await updateTask(tasks[taskIndex]);
-                renderTasks();
-                showAlert(`✅ Tarea ${completed ? 'completada' : 'pendiente'}`, 'success');
-            } catch (error) {
-                showAlert('❌ Error al actualizar la tarea', 'danger');
-            }
+  }
+
+  async function loadTasks() {
+    if (USE_API) {
+      try {
+        const res = await apiRequest('read', 'GET');
+        // Puede venir en res.tasks, res.data o res
+        tasks = res.tasks || res.data || (Array.isArray(res) ? res : []);
+      } catch (err) {
+        // fallback local
+        tasks = localLoadTasks();
+        if (tasks.length > 0) showAlert('Usando datos locales (API no disponible)', 'info');
+        if (err && err.status === 401) {
+          // no autenticado: mostrar UI correspondiente
+          showLoggedOut();
+          throw err;
         }
+      }
+    } else {
+      tasks = localLoadTasks();
     }
-    
-    // Eliminar tarea
-    async function deleteTaskHandler(taskId) {
+    renderTasks();
+    updateStats();
+    updateUpcomingAlert();
+    updateUpcomingTasksList();
+    return tasks;
+  }
+
+  async function toggleTaskComplete(taskId, completed) {
+    const idx = tasks.findIndex(t => t.id == taskId);
+    if (idx === -1) return;
+    tasks[idx].completed = completed ? 1 : 0;
+    try {
+      await updateTask(tasks[idx]);
+      renderTasks();
+      showAlert(`✅ Tarea ${completed ? 'completada' : 'pendiente'}`, 'success');
+    } catch (err) {
+      if (err.status === 401) {
+        showAlert('Necesitas iniciar sesión para actualizar tareas', 'warning');
+        showLoggedOut();
+        return;
+      }
+      showAlert('❌ Error al actualizar la tarea', 'danger');
+    }
+  }
+
+  async function deleteTaskHandler(taskId) {
     console.log('🗑️ Intentando eliminar tarea ID:', taskId);
-    
-    if (confirm('¿Estás seguro de que quieres eliminar esta tarea?')) {
-        try {
-            // PRIMERO: Usar DELETE con body (la forma correcta)
-            console.log('1. Probando DELETE con body...');
-            const result = await apiRequest('delete', 'DELETE', { id: taskId });
-            
-            // Si llegamos aquí, fue exitoso
-            tasks = tasks.filter(t => t.id != taskId);
-            renderTasks();
-            showAlert('✅ Tarea eliminada correctamente', 'success');
-            
-        } catch (deleteError) {
-            console.log('DELETE falló, probando POST...', deleteError);
-            
-            try {
-                // SEGUNDO: Intentar con POST (fallback)
-                console.log('2. Probando POST como fallback...');
-                const result = await apiRequest('delete', 'POST', { id: taskId });
-                
-                tasks = tasks.filter(t => t.id != taskId);
-                renderTasks();
-                showAlert('✅ Tarea eliminada (vía POST)', 'success');
-                
-            } catch (postError) {
-                console.log('POST también falló, probando GET...', postError);
-                
-                try {
-                    // TERCERO: Intentar con GET (último recurso)
-                    console.log('3. Probando GET como último recurso...');
-                    const result = await apiRequest('delete', 'GET', { id: taskId });
-                    
-                    tasks = tasks.filter(t => t.id != taskId);
-                    renderTasks();
-                    showAlert('✅ Tarea eliminada (vía GET)', 'success');
-                    
-                } catch (getError) {
-                    console.log('Todos los métodos fallaron:', getError);
-                    
-                    // CUARTO: Eliminar solo localmente
-                    tasks = tasks.filter(t => t.id != taskId);
-                    localStorage.setItem('taskflow_tasks', JSON.stringify(tasks));
-                    renderTasks();
-                    showAlert('⚠️ Tarea eliminada solo localmente (API no disponible)', 'warning');
-                }
-            }
-        }
+    if (!confirm('¿Estás seguro de que quieres eliminar esta tarea?')) return;
+    try {
+      const ok = await deleteTaskRemote(taskId);
+      if (ok) {
+        tasks = tasks.filter(t => t.id != taskId);
+        renderTasks();
+        showAlert('✅ Tarea eliminada correctamente', 'success');
+      } else {
+        // fallback local already performed in deleteTaskRemote
+        tasks = tasks.filter(t => t.id != taskId);
+        renderTasks();
+        showAlert('⚠️ Tarea eliminada solo localmente (API no disponible)', 'warning');
+      }
+    } catch (err) {
+      // If auth error
+      if (err.status === 401) {
+        showAlert('Necesitas iniciar sesión para eliminar tareas', 'warning');
+        showLoggedOut();
+        return;
+      }
+      showAlert('❌ Error al eliminar la tarea', 'danger');
     }
-}
-    
-    // Abrir modal de edición
-    function openEditModal(taskId) {
-        const task = tasks.find(t => t.id == taskId);
-        if (!task) return;
-        
-        // Para simplificar, recargar la página con modo edición
-        // En una versión avanzada, crearías un modal de edición
-        const newText = prompt('Editar tarea:', task.text || task.title);
-        
-        if (newText !== null && newText.trim() !== '') {
-            task.text = newText.trim();
-            task.title = newText.trim(); // Para compatibilidad con API
-            
-            updateTask(task).then(() => {
-                renderTasks();
-                showAlert('✏️ Tarea actualizada', 'success');
-            }).catch(() => {
-                showAlert('❌ Error al actualizar', 'danger');
-            });
-        }
-    }
-    
-    // ====================
-    // FUNCIONES DE UTILIDAD
-    // ====================
-    
-    // Determinar estado de fecha
-    function getDateStatusClasses(dueDateISO, isCompleted) {
-        if (!dueDateISO || isCompleted) {
-            return { taskClass: '', badgeClass: 'bg-secondary', icon: '' };
-        }
-        
-        const now = new Date();
-        const dueDate = new Date(dueDateISO);
-        const diffTime = dueDate - now;
-        
-        if (diffTime < 0) {
-            return { 
-                taskClass: 'task-overdue', 
-                badgeClass: 'date-overdue', 
-                icon: '-exclamation' 
-            };
-        }
-        
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 0) {
-            return { 
-                taskClass: 'task-due-soon', 
-                badgeClass: 'date-today', 
-                icon: '-event' 
-            };
-        } else if (diffDays === 1) {
-            return { 
-                taskClass: '', 
-                badgeClass: 'date-tomorrow', 
-                icon: '-event' 
-            };
-        } else if (diffDays <= 3) {
-            return { 
-                taskClass: '', 
-                badgeClass: 'bg-warning', 
-                icon: '-event' 
-            };
-        }
-        
-        return { 
-            taskClass: '', 
-            badgeClass: 'bg-info', 
-            icon: '' 
-        };
-    }
-    
-    // Tiempo restante
-    function getTimeLeft(dueDate) {
-        const now = new Date();
-        const diffTime = dueDate - now;
-        
-        if (diffTime < 0) {
-            return 'VENCIDA';
-        }
-        
-        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        
-        if (diffDays === 0) {
-            if (diffHours === 0) {
-                const diffMinutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
-                return `En ${diffMinutes} min`;
-            }
-            return `Hoy en ${diffHours}h`;
-        } else if (diffDays === 1) {
-            return 'Mañana';
-        } else if (diffDays <= 7) {
-            return `En ${diffDays} días`;
-        }
-        
-        return `${diffDays} días`;
-    }
-    
-    // Actualizar estadísticas
-    function updateStats() {
-        const total = tasks.length;
-        const completed = tasks.filter(t => t.completed).length;
-        const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-        
-        // Actualizar contadores
-        if (totalTasksSpan) totalTasksSpan.textContent = total;
-        if (completedTasksSpan) completedTasksSpan.textContent = completed;
-        if (sidebarTotalTasks) sidebarTotalTasks.textContent = total;
-        if (sidebarCompletedTasks) sidebarCompletedTasks.textContent = completed;
-        
-        // Actualizar barras de progreso
-        if (progressBar) {
-            progressBar.style.width = `${progress}%`;
-            progressBar.setAttribute('aria-valuenow', progress);
-        }
-        
-        if (mainProgressBar) {
-            mainProgressBar.style.width = `${progress}%`;
-            mainProgressBar.textContent = `${progress}%`;
-        }
-    }
-    
-    // Actualizar alerta de próximas tareas
-    function updateUpcomingAlert() {
-        if (!upcomingAlert) return;
-        
-        const now = new Date();
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        const upcomingTasks = tasks.filter(task => {
-            if (task.completed || !task.dueDate) return false;
-            const dueDate = new Date(task.dueDate);
-            return dueDate >= now && dueDate <= tomorrow;
-        });
-        
-        if (upcomingTasks.length > 0) {
-            upcomingAlert.style.display = 'flex';
-            upcomingCount.textContent = upcomingTasks.length;
+  }
+
+  function openEditModal(taskId) {
+    const task = tasks.find(t => t.id == taskId);
+    if (!task) return;
+    const newText = prompt('Editar tarea:', task.text || task.title);
+    if (newText !== null && newText.trim() !== '') {
+      task.text = newText.trim();
+      task.title = newText.trim();
+      updateTask(task).then(() => {
+        renderTasks();
+        showAlert('✏️ Tarea actualizada', 'success');
+      }).catch((err) => {
+        if (err && err.status === 401) {
+          showAlert('Necesitas iniciar sesión para editar tareas', 'warning');
+          showLoggedOut();
         } else {
-            upcomingAlert.style.display = 'none';
+          showAlert('❌ Error al actualizar', 'danger');
         }
+      });
     }
-    
-    // Actualizar lista de próximas tareas en sidebar
-    function updateUpcomingTasksList() {
-        if (!upcomingTasksList) return;
-        
-        const now = new Date();
-        const nextWeek = new Date(now);
-        nextWeek.setDate(nextWeek.getDate() + 7);
-        
-        const upcomingTasks = tasks.filter(task => {
-            if (task.completed || !task.dueDate) return false;
-            const dueDate = new Date(task.dueDate);
-            return dueDate >= now && dueDate <= nextWeek;
-        }).sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
-        
-        upcomingTasksList.innerHTML = '';
-        
-        if (upcomingTasks.length === 0) {
-            upcomingTasksList.innerHTML = `
-                <li class="list-group-item border-0 text-muted">
-                    <i class="bi bi-info-circle me-2"></i>
-                    No hay tareas próximas
-                </li>
-            `;
-            return;
-        }
-        
-        upcomingTasks.slice(0, 5).forEach(task => {
-            const dueDate = new Date(task.dueDate);
-            const formattedDate = dueDate.toLocaleDateString('es-ES', {
-                weekday: 'short',
-                day: '2-digit',
-                month: 'short'
-            });
-            
-            const li = document.createElement('li');
-            li.className = 'list-group-item border-0';
-            li.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center">
-                    <div style="max-width: 70%;">
-                        <small class="d-block text-truncate ${task.completed ? 'task-completed' : ''}">
-                            ${escapeHtml(task.text || task.title)}
-                        </small>
-                        <small class="text-muted">${formattedDate}</small>
-                    </div>
-                    <span class="badge ${task.priority === 'urgente' ? 'bg-danger' : 'bg-warning'}">
-                        ${getTimeLeft(dueDate)}
-                    </span>
-                </div>
-            `;
-            upcomingTasksList.appendChild(li);
-        });
+  }
+
+  // ====================
+  // RENDER / UI helpers
+  // ====================
+  function renderTasks() {
+    if (!taskList) return;
+    taskList.innerHTML = '';
+
+    let filtered = tasks.slice();
+    switch (currentFilter) {
+      case 'pending': filtered = tasks.filter(t => !t.completed); break;
+      case 'completed': filtered = tasks.filter(t => t.completed); break;
+      case 'urgent': filtered = tasks.filter(t => t.priority === 'urgente' && !t.completed); break;
     }
-    
-    // Mostrar alerta
-    function showAlert(message, type = 'info') {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-        alertDiv.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            min-width: 300px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        `;
-        
-        const icon = type === 'success' ? 'bi-check-circle' : 
-                    type === 'warning' ? 'bi-exclamation-triangle' : 
-                    type === 'danger' ? 'bi-x-circle' : 'bi-info-circle';
-        
-        alertDiv.innerHTML = `
+
+    filtered.sort((a, b) => {
+      if (+a.completed !== +b.completed) return +a.completed ? 1 : -1;
+      const order = { 'urgente': 1, 'alta': 2, 'media': 3, 'baja': 4 };
+      if (order[a.priority] !== order[b.priority]) return order[a.priority] - order[b.priority];
+      if (a.dueDate && b.dueDate) return new Date(a.dueDate) - new Date(b.dueDate);
+      if (a.dueDate && !b.dueDate) return -1;
+      if (!a.dueDate && b.dueDate) return 1;
+      return new Date(b.createdAt || b.created_at) - new Date(a.createdAt || a.created_at);
+    });
+
+    if (filtered.length === 0) {
+      if (emptyMessage) emptyMessage.style.display = 'block';
+    } else {
+      if (emptyMessage) emptyMessage.style.display = 'none';
+      filtered.forEach(task => {
+        const el = createTaskElement(task);
+        taskList.appendChild(el);
+      });
+    }
+    updateStats();
+    updateUpcomingAlert();
+    updateUpcomingTasksList();
+  }
+
+  function createTaskElement(task) {
+    const div = document.createElement('div');
+    div.className = 'list-group-item task-item';
+    div.dataset.id = task.id;
+    div.dataset.priority = task.priority || 'media';
+
+    const dateClasses = getDateStatusClasses(task.dueDate || task.due_date, !!+task.completed);
+
+    const priorityColors = { 'baja': 'secondary', 'media': 'success', 'alta': 'warning', 'urgente': 'danger' };
+    const priorityTexts = { 'baja': 'Baja', 'media': 'Media', 'alta': 'Alta', 'urgente': 'Urgente' };
+    const priorityColor = priorityColors[task.priority] || 'secondary';
+    const priorityText = priorityTexts[task.priority] || 'Media';
+
+    let dueDateHtml = '';
+    if (task.dueDate || task.due_date) {
+      const dueDate = new Date(task.dueDate || task.due_date);
+      const formattedDueDate = dueDate.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+      const timeLeft = getTimeLeft(dueDate);
+      dueDateHtml = `
+        <div class="mt-1">
+          <span class="badge ${dateClasses.badgeClass} date-badge">
+            <i class="bi bi-calendar${dateClasses.icon}"></i> ${timeLeft}
+          </span>
+          <small class="text-muted ms-2">${formattedDueDate}</small>
+        </div>
+      `;
+    }
+
+    const createdDate = new Date(task.createdAt || task.created_at || Date.now());
+    const formattedCreatedDate = createdDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+    div.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center ${dateClasses.taskClass}">
+        <div class="d-flex align-items-center" style="flex-grow:1;">
+          <div class="form-check me-3">
+            <input class="form-check-input task-checkbox" type="checkbox" id="task-${task.id}" ${+task.completed ? 'checked' : ''}>
+          </div>
+          <div style="flex-grow:1;">
             <div class="d-flex align-items-center">
-                <i class="bi ${icon} me-2"></i>
-                <span>${message}</span>
-                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+              <label class="form-check-label ${+task.completed ? 'task-completed' : ''}" for="task-${task.id}">
+                ${escapeHtml(task.text || task.title || '')}
+              </label>
+              <span class="badge bg-${priorityColor} priority-badge ms-2">${priorityText}</span>
             </div>
-        `;
-        
-        document.body.appendChild(alertDiv);
-        
-        setTimeout(() => {
-            if (alertDiv.parentNode) {
-                alertDiv.remove();
-            }
-        }, 4000);
+            ${dueDateHtml}
+            <small class="text-muted"><i class="bi bi-clock"></i> Creada: ${formattedCreatedDate}</small>
+            ${+task.completed ? `<small class="text-success ms-2"><i class="bi bi-check-circle"></i> Completada</small>` : ''}
+          </div>
+        </div>
+        <div class="btn-group" role="group">
+          <button class="btn btn-sm btn-outline-primary edit-btn" data-id="${task.id}" title="Editar tarea"><i class="bi bi-pencil"></i></button>
+          <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${task.id}" title="Eliminar tarea"><i class="bi bi-trash"></i></button>
+        </div>
+      </div>
+    `;
+
+    if (dateClasses.taskClass) {
+      const inner = div.querySelector('.d-flex.justify-content-between');
+      if (inner) inner.classList.add(...dateClasses.taskClass.split(' ').filter(Boolean));
     }
-    
-    // Escapar HTML
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+
+    addTaskEvents(div, task.id);
+    return div;
+  }
+
+  function addTaskEvents(taskElement, taskId) {
+    const checkbox = taskElement.querySelector('.task-checkbox');
+    const editBtn = taskElement.querySelector('.edit-btn');
+    const deleteBtn = taskElement.querySelector('.delete-btn');
+
+    if (checkbox) checkbox.addEventListener('change', async () => await toggleTaskComplete(taskId, checkbox.checked));
+    if (editBtn) editBtn.addEventListener('click', () => openEditModal(taskId));
+    if (deleteBtn) deleteBtn.addEventListener('click', async () => await deleteTaskHandler(taskId));
+  }
+
+  // ====================
+  // UTIL / FECHA / STATS
+  // ====================
+  function getDateStatusClasses(dueDateISO, isCompleted) {
+    if (!dueDateISO || isCompleted) return { taskClass: '', badgeClass: 'bg-secondary', icon: '' };
+    const now = new Date();
+    const dueDate = new Date(dueDateISO);
+    const diffTime = dueDate - now;
+    if (diffTime < 0) return { taskClass: 'task-overdue', badgeClass: 'date-overdue', icon: '-exclamation' };
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return { taskClass: 'task-due-soon', badgeClass: 'date-today', icon: '-event' };
+    if (diffDays === 1) return { taskClass: '', badgeClass: 'date-tomorrow', icon: '-event' };
+    if (diffDays <= 3) return { taskClass: '', badgeClass: 'bg-warning', icon: '-event' };
+    return { taskClass: '', badgeClass: 'bg-info', icon: '' };
+  }
+
+  function getTimeLeft(dueDate) {
+    const now = new Date();
+    const diffTime = dueDate - now;
+    if (diffTime < 0) return 'VENCIDA';
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    if (diffDays === 0) {
+      if (diffHours === 0) {
+        const diffMinutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
+        return `En ${diffMinutes} min`;
+      }
+      return `Hoy en ${diffHours}h`;
+    } else if (diffDays === 1) return 'Mañana';
+    else if (diffDays <= 7) return `En ${diffDays} días`;
+    return `${diffDays} días`;
+  }
+
+  function updateStats() {
+    const total = tasks.length;
+    const completed = tasks.filter(t => +t.completed).length;
+    const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+    if (totalTasksSpan) totalTasksSpan.textContent = total;
+    if (completedTasksSpan) completedTasksSpan.textContent = completed;
+    if (sidebarTotalTasks) sidebarTotalTasks.textContent = total;
+    if (sidebarCompletedTasks) sidebarCompletedTasks.textContent = completed;
+    if (progressBar) { progressBar.style.width = `${progress}%`; progressBar.setAttribute('aria-valuenow', progress); }
+    if (mainProgressBar) { mainProgressBar.style.width = `${progress}%`; mainProgressBar.textContent = `${progress}%`; }
+  }
+
+  function updateUpcomingAlert() {
+    if (!upcomingAlert) return;
+    const now = new Date();
+    const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+    const upcoming = tasks.filter(task => { if (+task.completed || !(task.dueDate || task.due_date)) return false; const d = new Date(task.dueDate || task.due_date); return d >= now && d <= tomorrow; });
+    if (upcoming.length > 0) { upcomingAlert.style.display = 'flex'; upcomingCount.textContent = upcoming.length; } else { upcomingAlert.style.display = 'none'; }
+  }
+
+  function updateUpcomingTasksList() {
+    if (!upcomingTasksList) return;
+    const now = new Date(); const nextWeek = new Date(now); nextWeek.setDate(nextWeek.getDate() + 7);
+    const upcoming = tasks.filter(task => { if (+task.completed || !(task.dueDate || task.due_date)) return false; const d = new Date(task.dueDate || task.due_date); return d >= now && d <= nextWeek; }).sort((a,b) => new Date(a.dueDate||a.due_date) - new Date(b.dueDate||b.due_date));
+    upcomingTasksList.innerHTML = '';
+    if (upcoming.length === 0) {
+      upcomingTasksList.innerHTML = `<li class="list-group-item border-0 text-muted"><i class="bi bi-info-circle me-2"></i>No hay tareas próximas</li>`;
+      return;
     }
-    
-    // Resetear formulario
-    function resetForm() {
-        taskInput.value = '';
-        prioritySelect.value = 'media';
-        
-        // Mañana a las 12:00 por defecto
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(12, 0, 0, 0);
-        dueDateInput.value = tomorrow.toISOString().slice(0, 16);
-        
-        taskInput.focus();
-    }
-    
-    // ====================
-    // EVENT LISTENERS
-    // ====================
-    
-    // Formulario de nueva tarea
-    if (taskForm) {
-        taskForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            addTask();
-        });
-    }
-    
-    // Filtros
-    if (filterButtons) {
-        filterButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                filterButtons.forEach(btn => btn.classList.remove('active'));
-                this.classList.add('active');
-                currentFilter = this.dataset.filter;
-                renderTasks();
-            });
-        });
-    }
-    
-    // Configurar fecha por defecto
+    upcoming.slice(0,5).forEach(task => {
+      const due = new Date(task.dueDate || task.due_date);
+      const formatted = due.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short' });
+      const li = document.createElement('li');
+      li.className = 'list-group-item border-0';
+      li.innerHTML = `<div class="d-flex justify-content-between align-items-center"><div style="max-width:70%"><small class="d-block text-truncate ${+task.completed ? 'task-completed' : ''}">${escapeHtml(task.text || task.title)}</small><small class="text-muted">${formatted}</small></div><span class="badge ${task.priority === 'urgente' ? 'bg-danger' : 'bg-warning'}">${getTimeLeft(due)}</span></div>`;
+      upcomingTasksList.appendChild(li);
+    });
+  }
+
+  function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.style.cssText = `position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);`;
+    const icon = type === 'success' ? 'bi-check-circle' : type === 'warning' ? 'bi-exclamation-triangle' : type === 'danger' ? 'bi-x-circle' : 'bi-info-circle';
+    alertDiv.innerHTML = `<div class="d-flex align-items-center"><i class="bi ${icon} me-2"></i><span>${message}</span><button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button></div>`;
+    document.body.appendChild(alertDiv);
+    setTimeout(() => { if (alertDiv.parentNode) alertDiv.remove(); }, 4000);
+  }
+
+  function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text || ''; return div.innerHTML; }
+
+  function resetForm() {
+    if (taskInput) taskInput.value = '';
+    if (prioritySelect) prioritySelect.value = 'media';
     if (dueDateInput) {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        tomorrow.setHours(12, 0, 0, 0);
-        dueDateInput.min = new Date().toISOString().slice(0, 16);
-        dueDateInput.value = tomorrow.toISOString().slice(0, 16);
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(12,0,0,0);
+      dueDateInput.value = tomorrow.toISOString().slice(0,16);
     }
-    
-    // ====================
-    // INICIALIZACIÓN
-    // ====================
-    console.log('🚀 TaskFlow iniciando...');
-    loadTasks();
-    
-    // Recordatorio diario
+    if (taskInput) taskInput.focus();
+  }
+
+  // ====================
+  // AUTH UI helpers
+  // ====================
+  function showLoggedIn(username) {
+    currentUser = { username };
+    if (authSection) authSection.style.display = 'none';
+    if (appSection) appSection.style.display = 'block';
+    if (whoami) whoami.textContent = username || '';
+  }
+  function showLoggedOut() {
+    currentUser = null;
+    if (authSection) authSection.style.display = 'block';
+    if (appSection) appSection.style.display = 'none';
+    if (whoami) whoami.textContent = '';
+  }
+
+  // ====================
+  // EVENT LISTENERS
+  // ====================
+  if (taskForm) {
+    taskForm.addEventListener('submit', function(e) { e.preventDefault(); addTask(); });
+  }
+
+  if (filterButtons) {
+    filterButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        this.classList.add('active');
+        currentFilter = this.dataset.filter || 'all';
+        renderTasks();
+      });
+    });
+  }
+
+  if (dueDateInput) {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(12,0,0,0);
+    dueDateInput.min = new Date().toISOString().slice(0,16);
+    dueDateInput.value = tomorrow.toISOString().slice(0,16);
+  }
+
+  // Auth forms (if present) — they won't break anything if absent
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const username = registerForm.username.value.trim();
+      const email = registerForm.email.value.trim();
+      const password = registerForm.password.value;
+      try {
+        const res = await registerUser(username, email, password);
+        if (res && res.success) {
+          showLoggedIn(res.user.username);
+          await loadTasks();
+        } else showAlert(res.error || 'Error en registro', 'danger');
+      } catch (err) {
+        showAlert(err.message || 'Error en registro', 'danger');
+      }
+    });
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const identifier = loginForm.identifier.value.trim();
+      const password = loginForm.password.value;
+      try {
+        const res = await loginUser(identifier, password);
+        if (res && res.success) {
+          showLoggedIn(res.user.username);
+          await loadTasks();
+        } else showAlert(res.error || 'Credenciales inválidas', 'danger');
+      } catch (err) {
+        showAlert(err.message || 'Error en login', 'danger');
+      }
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      try {
+        await logoutUser();
+      } catch (e) { /* ignore */ }
+      showLoggedOut();
+    });
+  }
+
+  // ====================
+  // INICIALIZACIÓN
+  // ====================
+  console.log('🚀 TaskFlow iniciando...');
+  // Intentamos cargar tareas — si la API responde 401, dejamos el estado no autenticado y usamos local
+  (async () => {
+    try {
+      await loadTasks();
+      // Si hay tareas desde el servidor, asumimos sesión activa (puedes mejorar con endpoint whoami)
+      if (tasks && tasks.length >= 0) {
+        showLoggedIn(''); // no username available without whoami endpoint
+      }
+    } catch (err) {
+      if (err && err.status === 401) {
+        showLoggedOut();
+      } else {
+        console.warn('Inicialización: posible error de red o servidor', err);
+      }
+    }
+
+    // Recordatorio diario (después de 2s)
     setTimeout(() => {
-        const today = new Date();
-        const todayTasks = tasks.filter(task => {
-            if (task.completed || !task.dueDate) return false;
-            const dueDate = new Date(task.dueDate);
-            return dueDate.toDateString() === today.toDateString();
-        });
-        
-        if (todayTasks.length > 0) {
-            showAlert(`📅 Tienes ${todayTasks.length} tarea(s) para hoy`, 'info');
-        }
+      const today = new Date();
+      const todayTasks = tasks.filter(task => { if (+task.completed || !(task.dueDate || task.due_date)) return false; const d = new Date(task.dueDate || task.due_date); return d.toDateString() === today.toDateString(); });
+      if (todayTasks.length > 0) showAlert(`📅 Tienes ${todayTasks.length} tarea(s) para hoy`, 'info');
     }, 2000);
+  })();
+
 });
