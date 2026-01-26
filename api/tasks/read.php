@@ -1,46 +1,34 @@
 <?php
-// api/tasks/read.php
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET');
 
-// RUTA CORREGIDA: __DIR__ obtiene la ruta absoluta
-require_once __DIR__ . '/../../config/Database.php';
-require_once __DIR__ . '/../../models/Task.php';
-
-// Para debug
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+require_once '../../config/database.php';
+require_once '../auth/check_auth.php'; // define $user_id
 
 try {
-    $task = new Task();
-    $stmt = $task->readAll();
-    
-    $tasks_arr = array();
-    $tasks_arr["data"] = array();
-    
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        extract($row);
-        
-        $task_item = array(
-            "id" => $id,
-            "title" => $title,
-            "description" => $description,
-            "priority" => $priority,
-            "due_date" => $due_date,
-            "completed" => (bool)$completed,
-            "created_at" => $created_at,
-            "updated_at" => $updated_at
-        );
-        
-        array_push($tasks_arr["data"], $task_item);
-    }
-    
-    echo json_encode($tasks_arr);
-    
+    $database = new Database();
+    $conn = $database->getConnection();
+
+    $query = "SELECT * FROM tasks WHERE user_id = :user_id
+              ORDER BY 
+                completed ASC,
+                CASE priority 
+                    WHEN 'urgente' THEN 1
+                    WHEN 'alta' THEN 2
+                    WHEN 'media' THEN 3
+                    WHEN 'baja' THEN 4
+                END ASC,
+                due_date ASC";
+
+    $stmt = $conn->prepare($query);
+    $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
+    $stmt->execute();
+
+    $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo json_encode(['tasks' => $tasks]);
+
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(array(
-        "error" => $e->getMessage(),
-        "trace" => $e->getTraceAsString()
-    ));
+    echo json_encode(['error' => $e->getMessage()]);
 }
