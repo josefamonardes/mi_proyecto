@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../_common.php';
 require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../auth/check_auth.php'; // define $user_id
+$user_id = require_auth(); 
 
 $in = input();
 
