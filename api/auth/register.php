@@ -1,59 +1,51 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST');
+declare(strict_types=1);
 
-require_once '../../config/database.php';
-session_start();
+require_once __DIR__ . '/../_common.php';
+require_once __DIR__ . '/../../config/database.php';
 
-$input = json_decode(file_get_contents('php://input'), true);
-$username = trim($input['username'] ?? '');
-$email = filter_var(trim($input['email'] ?? ''), FILTER_VALIDATE_EMAIL);
-$password = $input['password'] ?? '';
+$in = input();
+$username = trim((string)($in['username'] ?? ''));
+$emailRaw = trim((string)($in['email'] ?? ''));
+$email = filter_var($emailRaw, FILTER_VALIDATE_EMAIL) ?: '';
+$password = (string)($in['password'] ?? '');
 
-if (!$username || !$email || !$password) {
-    http_response_code(400);
-    echo json_encode(['error' => 'username, email y password son obligatorios']);
-    exit;
+if ($username === '' || $email === '' || $password === '') {
+  respond(false, 'username, email y password son obligatorios', null, 400);
+}
+if (!is_valid_username($username)) {
+  respond(false, 'Username inválido (3-20, letras/números/_)', null, 400);
+}
+if (!is_strong_password($password)) {
+  respond(false, 'Contraseña débil (8+, mayúscula, minúscula y número)', null, 400);
 }
 
 try {
-    $database = new Database();
-    $conn = $database->getConnection();
+  $database = new Database();
+  $conn = $database->getConnection();
 
-    // Comprobar usuario existente (username o email)
-    $stmt = $conn->prepare("SELECT id FROM users WHERE username = :username OR email = :email LIMIT 1");
-    $stmt->bindValue(':username', $username);
-    $stmt->bindValue(':email', $email);
-    $stmt->execute();
+  // existe username o email
+  $stmt = $conn->prepare("SELECT id FROM users WHERE username = :u OR email = :e LIMIT 1");
+  $stmt->execute([':u' => $username, ':e' => $email]);
+  if ($stmt->fetch()) {
+    respond(false, 'Usuario o email ya existe', null, 409);
+  }
 
-    if ($stmt->fetch()) {
-        http_response_code(409);
-        echo json_encode(['error' => 'Usuario o email ya existe']);
-        exit;
-    }
+  $hash = password_hash($password, PASSWORD_DEFAULT);
 
-    // Hashear la contraseña
-    $password_hash = password_hash($password, PASSWORD_DEFAULT);
+  $stmt = $conn->prepare("INSERT INTO users (username, email, password_hash) VALUES (:u, :e, :h)");
+  $stmt->execute([':u' => $username, ':e' => $email, ':h' => $hash]);
 
-    $stmt = $conn->prepare("INSERT INTO users (username, email, password_hash) VALUES (:username, :email, :password_hash)");
-    $stmt->bindValue(':username', $username);
-    $stmt->bindValue(':email', $email);
-    $stmt->bindValue(':password_hash', $password_hash);
+  $userId = (int)$conn->lastInsertId();
 
-    if ($stmt->execute()) {
-        $userId = $conn->lastInsertId();
-        // iniciar sesión automáticamente
-        $_SESSION['user_id'] = (int)$userId;
-        $_SESSION['username'] = $username;
+  session_regenerate_id(true);
+  $_SESSION['user_id'] = $userId;
+  $_SESSION['username'] = $username;
 
-        http_response_code(201);
-        echo json_encode(['success' => true, 'user' => ['id' => $userId, 'username' => $username, 'email' => $email]]);
-    } else {
-        http_response_code(500);
-        echo json_encode(['error' => 'Error al crear usuario']);
-    }
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+  respond(true, 'Usuario creado', [
+    'user' => ['id' => $userId, 'username' => $username, 'email' => $email]
+  ], 201);
+
+} catch (Throwable $e) {
+  respond(false, 'Error interno', null, 500);
 }

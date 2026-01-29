@@ -1,42 +1,45 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST');
+declare(strict_types=1);
 
-require_once '../../config/database.php';
-session_start();
+require_once __DIR__ . '/../_common.php';
+require_once __DIR__ . '/../../config/database.php';
 
-$input = json_decode(file_get_contents('php://input'), true);
-$identifier = trim($input['identifier'] ?? ''); // puede ser username o email
-$password = $input['password'] ?? '';
+$in = input();
+$identifier = trim((string)($in['identifier'] ?? '')); // username o email
+$password = (string)($in['password'] ?? '');
 
-if (!$identifier || !$password) {
-    http_response_code(400);
-    echo json_encode(['error' => 'identifier y password son obligatorios']);
-    exit;
+if ($identifier === '' || $password === '') {
+  respond(false, 'identifier y password son obligatorios', null, 400);
 }
 
 try {
-    $database = new Database();
-    $conn = $database->getConnection();
+  $database = new Database();
+  $conn = $database->getConnection();
 
-    $stmt = $conn->prepare("SELECT id, username, email, password_hash FROM users WHERE username = :id OR email = :id LIMIT 1");
-    $stmt->bindValue(':id', $identifier);
-    $stmt->execute();
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+  $stmt = $conn->prepare(
+    "SELECT id, username, email, password_hash
+     FROM users
+     WHERE username = :id OR email = :id
+     LIMIT 1"
+  );
+  $stmt->execute([':id' => $identifier]);
+  $user = $stmt->fetch();
 
-    if (!$user || !password_verify($password, $user['password_hash'])) {
-        http_response_code(401);
-        echo json_encode(['error' => 'Credenciales inválidas']);
-        exit;
-    }
+  if (!$user || !password_verify($password, (string)$user['password_hash'])) {
+    respond(false, 'Credenciales inválidas', null, 401);
+  }
 
-    // Login OK -> inicializar sesión
-    $_SESSION['user_id'] = (int)$user['id'];
-    $_SESSION['username'] = $user['username'];
+  session_regenerate_id(true);
+  $_SESSION['user_id'] = (int)$user['id'];
+  $_SESSION['username'] = (string)$user['username'];
 
-    echo json_encode(['success' => true, 'user' => ['id' => (int)$user['id'], 'username' => $user['username'], 'email' => $user['email']]]);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+  respond(true, 'Login correcto', [
+    'user' => [
+      'id' => (int)$user['id'],
+      'username' => (string)$user['username'],
+      'email' => (string)$user['email'],
+    ],
+  ]);
+} catch (Throwable $e) {
+  respond(false, 'Error interno', null, 500);
 }

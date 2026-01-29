@@ -1,9 +1,7 @@
 <?php
-// Usar como include en endpoints que requieran autenticación
-session_start();
-if (empty($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['error' => 'No autenticado']);
-    exit;
-}
-$user_id = (int)$_SESSION['user_id'];
+declare(strict_types=1);
+
+require_once __DIR__ . '/../_common.php';
+
+$isAuth = !empty($_SESSION['user_id']);
+respond(true, 'OK', ['authenticated' => $isAuth]);
