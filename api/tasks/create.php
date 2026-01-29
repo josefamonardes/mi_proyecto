@@ -1,49 +1,47 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST');
+declare(strict_types=1);
 
-require_once '../../config/database.php';
-require_once '../auth/check_auth.php'; // inicializa sesión y define $user_id
+require_once __DIR__ . '/../_common.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../auth/check_auth.php'; // define $user_id
 
-$input = json_decode(file_get_contents('php://input'), true);
+$in = input();
 
-if (empty($input['title'])) {
-    http_response_code(400);
-    echo json_encode(['error' => 'Title is required']);
-    exit;
+$title = trim((string)($in['title'] ?? ''));
+if ($title === '') {
+  respond(false, 'Title is required', null, 400);
 }
 
+$description = (string)($in['description'] ?? '');
+$priority = (string)($in['priority'] ?? 'media');
+$due_date = $in['due_date'] ?? null;
+$completed = filter_var($in['completed'] ?? false, FILTER_VALIDATE_BOOL);
+
+$allowed = ['urgente','alta','media','baja'];
+if (!in_array($priority, $allowed, true)) $priority = 'media';
+
 try {
-    $database = new Database();
-    $conn = $database->getConnection();
+  $database = new Database();
+  $conn = $database->getConnection();
 
-    $sql = "INSERT INTO tasks (user_id, title, description, priority, due_date, completed) 
-            VALUES (:user_id, :title, :description, :priority, :due_date, :completed)";
+  $sql = "INSERT INTO tasks (user_id, title, description, priority, due_date, completed)
+          VALUES (:user_id, :title, :description, :priority, :due_date, :completed)";
+  $stmt = $conn->prepare($sql);
+  $stmt->execute([
+    ':user_id' => $user_id,
+    ':title' => $title,
+    ':description' => $description,
+    ':priority' => $priority,
+    ':due_date' => $due_date ?: null,
+    ':completed' => $completed ? 1 : 0,
+  ]);
 
-    $stmt = $conn->prepare($sql);
-    $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
-    $stmt->bindValue(':title', $input['title']);
-    $stmt->bindValue(':description', $input['description'] ?? '');
-    $stmt->bindValue(':priority', $input['priority'] ?? 'media');
-    $stmt->bindValue(':due_date', $input['due_date'] ?? null);
-    $stmt->bindValue(':completed', $input['completed'] ?? false, PDO::PARAM_BOOL);
+  $taskId = (int)$conn->lastInsertId();
+  $stmt = $conn->prepare("SELECT * FROM tasks WHERE id = :id AND user_id = :uid");
+  $stmt->execute([':id' => $taskId, ':uid' => $user_id]);
+  $task = $stmt->fetch();
 
-    if ($stmt->execute()) {
-        $taskId = $conn->lastInsertId();
-        $stmt = $conn->prepare("SELECT * FROM tasks WHERE id = ?");
-        $stmt->execute([$taskId]);
-        $task = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        echo json_encode([
-            'success' => true,
-            'task' => $task
-        ]);
-    } else {
-        echo json_encode(['error' => 'Error creating task']);
-    }
-
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+  respond(true, 'Tarea creada', ['task' => $task]);
+} catch (Throwable $e) {
+  respond(false, 'Error interno', null, 500);
 }

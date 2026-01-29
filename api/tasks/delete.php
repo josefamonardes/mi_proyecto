@@ -1,33 +1,28 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: DELETE');
+declare(strict_types=1);
 
-require_once '../../config/Database.php';
+require_once __DIR__ . '/../_common.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../auth/check_auth.php'; // $user_id
 
-$input = json_decode(file_get_contents('php://input'), true);
-
-if (!isset($input['id'])) {
-    http_response_code(400);
-    echo json_encode(['error' => 'ID is required']);
-    exit;
+$in = input();
+$id = isset($in['id']) ? (int)$in['id'] : 0;
+if ($id <= 0) {
+  respond(false, 'ID is required', null, 400);
 }
 
 try {
-    $database = new Database();
-    $conn = $database->getConnection();
-    
-    $sql = "DELETE FROM tasks WHERE id = :id";
-    $stmt = $conn->prepare($sql);
-    $stmt->bindValue(':id', $input['id'], PDO::PARAM_INT);
-    
-    if ($stmt->execute()) {
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['error' => 'Error deleting task']);
-    }
-    
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+  $database = new Database();
+  $conn = $database->getConnection();
+
+  $stmt = $conn->prepare("DELETE FROM tasks WHERE id = :id AND user_id = :user_id");
+  $stmt->execute([':id' => $id, ':user_id' => $user_id]);
+
+  if ($stmt->rowCount() === 0) {
+    respond(false, 'No existe la tarea o no tienes permisos', null, 404);
+  }
+
+  respond(true, 'Tarea eliminada');
+} catch (Throwable $e) {
+  respond(false, 'Error interno', null, 500);
 }

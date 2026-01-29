@@ -1,34 +1,29 @@
 <?php
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET');
+declare(strict_types=1);
 
-require_once '../../config/database.php';
-require_once '../auth/check_auth.php'; // define $user_id
+require_once __DIR__ . '/../_common.php';
+require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../auth/check_auth.php';
 
 try {
-    $database = new Database();
-    $conn = $database->getConnection();
+  $database = new Database();
+  $conn = $database->getConnection();
 
-    $query = "SELECT * FROM tasks WHERE user_id = :user_id
-              ORDER BY 
-                completed ASC,
-                CASE priority 
-                    WHEN 'urgente' THEN 1
-                    WHEN 'alta' THEN 2
-                    WHEN 'media' THEN 3
-                    WHEN 'baja' THEN 4
-                END ASC,
-                due_date ASC";
+  $query = "SELECT * FROM tasks WHERE user_id = :user_id
+            ORDER BY
+              completed ASC,
+              CASE priority
+                WHEN 'urgente' THEN 1
+                WHEN 'alta' THEN 2
+                WHEN 'media' THEN 3
+                WHEN 'baja' THEN 4
+              END ASC,
+              due_date ASC";
+  $stmt = $conn->prepare($query);
+  $stmt->execute([':user_id' => $user_id]);
 
-    $stmt = $conn->prepare($query);
-    $stmt->bindValue(':user_id', $user_id, PDO::PARAM_INT);
-    $stmt->execute();
-
-    $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode(['tasks' => $tasks]);
-
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => $e->getMessage()]);
+  $tasks = $stmt->fetchAll();
+  respond(true, 'OK', ['tasks' => $tasks]);
+} catch (Throwable $e) {
+  respond(false, 'Error interno', null, 500);
 }
