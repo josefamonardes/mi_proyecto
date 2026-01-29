@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const registerForm = document.getElementById('registerForm');
   const loginForm = document.getElementById('loginForm');
   const logoutBtn = document.getElementById('logoutBtn');
+  const btnLogin = document.getElementById('btnLogin');
 
   const taskForm = document.getElementById('taskForm');
   const taskInput = document.getElementById('taskInput');
@@ -41,8 +42,38 @@ document.addEventListener('DOMContentLoaded', function() {
   // UTIL: alert simple
   // ====================
   function showAlert(message, type = 'info', timeout = 4000) {
-    console.log(`[alert ${type}] ${message}`);
-    // Esta función solo hace un log por ahora. Puedes reemplazar con un toast visual.
+    // Muestra alertas Bootstrap si existe un contenedor #alerts (recomendado).
+    // Si no existe, hace fallback a console.
+    const container = document.getElementById('alerts');
+    if (!container) {
+      console.log(`[alert ${type}] ${message}`);
+      return;
+    }
+
+    const id = `alert-${Date.now()}`;
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+      <div id="${id}" class="alert alert-${type} alert-dismissible fade show" role="alert">
+        ${escapeHtml(message)}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    `;
+    container.appendChild(wrapper);
+
+    if (timeout && timeout > 0) {
+      setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) {
+          // Cierra con API de bootstrap si está disponible; si no, elimina.
+          try {
+            const alert = bootstrap.Alert.getOrCreateInstance(el);
+            alert.close();
+          } catch (e) {
+            el.remove();
+          }
+        }
+      }, timeout);
+    }
   }
 
   // ====================
@@ -73,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (!res.ok) {
-      const msg = data && data.error ? data.error : `HTTP ${res.status}`;
+      const msg = (data && (data.message || data.error)) ? (data.message || data.error) : `HTTP ${res.status}`;
       const err = new Error(msg);
       err.status = res.status;
       err.body = data;
@@ -179,6 +210,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (authSection) authSection.style.display = 'none';
     if (appSection) appSection.style.display = 'block';
     if (whoami) whoami.textContent = username || '';
+    if (btnLogin) btnLogin.classList.add('d-none');
+    if (logoutBtn) logoutBtn.classList.remove('d-none');
   }
 
   function showLoggedOut() {
@@ -186,6 +219,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (authSection) authSection.style.display = 'block';
     if (appSection) appSection.style.display = 'none';
     if (whoami) whoami.textContent = '';
+    if (logoutBtn) logoutBtn.classList.add('d-none');
+    if (btnLogin) btnLogin.classList.remove('d-none');
   }
 
   // ====================
@@ -198,7 +233,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!tasksList) return;
 
     tasksList.innerHTML = '';
-    const filtered = tasks.filter(t => {
+
+    const arr = Array.isArray(tasks) ? tasks : [];
+    const filtered = arr.filter(t => {
       if (currentFilter === 'all') return true;
       if (currentFilter === 'pending') return !t.completed;
       if (currentFilter === 'completed') return t.completed;
@@ -264,12 +301,22 @@ document.addEventListener('DOMContentLoaded', function() {
       renderTasks();
       return tasks;
     }
+
     const res = await apiRequest('read', 'GET', null);
-    // soportar múltiples formatos
-    if (Array.isArray(res)) tasks = res;
-    else if (res && res.tasks) tasks = res.tasks;
-    else if (res && res.data) tasks = res.data;
-    else tasks = [];
+
+    // Formato esperado del backend: { ok, message, data: { tasks: [...] } }
+    if (Array.isArray(res)) {
+      tasks = res;
+    } else if (res && Array.isArray(res.tasks)) {
+      tasks = res.tasks;
+    } else if (res && res.data && Array.isArray(res.data.tasks)) {
+      tasks = res.data.tasks;
+    } else if (res && res.data && Array.isArray(res.data)) {
+      tasks = res.data;
+    } else {
+      tasks = [];
+    }
+
     renderTasks();
     return tasks;
   }
@@ -281,9 +328,15 @@ document.addEventListener('DOMContentLoaded', function() {
       localSaveTasksArray(arr);
       return task;
     }
+
     const res = await apiRequest('create', 'POST', task);
-    if (res && res.task) return res.task;
-    return res;
+
+    // Formato esperado: { ok, message, data: { task: {...} } }
+    const created = res?.data?.task || res?.task || null;
+    if (created) return created;
+
+    // Si el backend devolvió OK pero sin task, lo tratamos como error de contrato.
+    throw new Error('La API no devolvió la tarea creada');
   }
 
   async function updateTaskOnServer(task) {
@@ -319,11 +372,11 @@ document.addEventListener('DOMContentLoaded', function() {
       const password = (registerForm.password && registerForm.password.value) || '';
       try {
         const res = await registerUser(username, email, password);
-        if (res && res.success) {
+        if (res && res.ok) {
           // redirigir a la app principal
           window.location.href = 'index.html';
         } else {
-          showAlert(res.error || 'Error en registro', 'danger');
+          showAlert((res && (res.message || res.error)) || 'Error en registro', 'danger');
         }
       } catch (err) {
         showAlert(err.message || 'Error en registro', 'danger');
@@ -338,11 +391,11 @@ document.addEventListener('DOMContentLoaded', function() {
       const password = (loginForm.password && loginForm.password.value) || '';
       try {
         const res = await loginUser(identifier, password);
-        if (res && res.success) {
+        if (res && res.ok) {
           // redirigir a la app principal
           window.location.href = 'index.html';
         } else {
-          showAlert(res.error || 'Credenciales inválidas', 'danger');
+          showAlert((res && (res.message || res.error)) || 'Credenciales inválidas', 'danger');
         }
       } catch (err) {
         showAlert(err.message || 'Error en login', 'danger');
@@ -375,20 +428,17 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
 
+      // Enviamos al backend solo lo que necesita (evita desalineaciones de contrato)
       const task = {
-        id: Date.now(),
-        text,
         title: text,
-        description: '',
         priority,
-        dueDate,
         due_date: dueDate,
-        completed: 0,
-        createdAt: new Date().toISOString()
+        completed: 0
       };
 
       try {
         const saved = await saveTask(task);
+        if (!Array.isArray(tasks)) tasks = [];
         tasks.push(saved);
         renderTasks();
         if (taskInput) taskInput.value = '';
@@ -437,9 +487,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (USE_API) {
           try {
             const who = await whoamiRequest();
-            if (who && who.success && who.user) {
-              console.log('✅ whoami:', who.user);
-              showLoggedIn(who.user.username || '');
+            if (who && who.ok && who.data && who.data.user) {
+              console.log('✅ whoami:', who.data.user);
+              showLoggedIn(who.data.user.username || '');
             } else {
               console.warn('whoami no devolvió user -> redirigiendo a auth.html');
               redirectToAuth();

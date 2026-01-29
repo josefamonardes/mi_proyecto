@@ -1,3 +1,16 @@
+/* Layout base: evita barras raras y mantiene el footer al fondo */
+html, body { height: 100%; }
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+main { flex: 1 0 auto; }
+footer { flex-shrink: 0; width: 100%; }
+
+/* Navbar */
+.navbar-brand { letter-spacing: 0.2px; }
+
 /* Añade esto a tu style.css */
 .task-item {
     transition: all 0.3s ease;

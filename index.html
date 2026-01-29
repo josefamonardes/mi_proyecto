@@ -16,25 +16,38 @@
 </head>
 <body>
   <!-- Navegación -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm sticky-top">
     <div class="container">
-      <a class="navbar-brand fw-bold" href="#">
+      <a class="navbar-brand fw-bold" href="index.html">
         <i class="bi bi-check2-circle me-2"></i> TaskFlow
       </a>
+
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>
       </button>
+
       <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link active" href="#"><i class="bi bi-house-door"></i> Inicio</a></li>
-          <li class="nav-item"><a class="nav-link" href="#"><i class="bi bi-list-task"></i> Mis Tareas</a></li>
-          <li class="nav-item"><a class="nav-link" href="auth.html"><i class="bi bi-person"></i> Iniciar sesión</a></li>
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link active" href="index.html"><i class="bi bi-house-door"></i> Inicio</a></li>
+          <li class="nav-item"><a class="nav-link" href="#tareas"><i class="bi bi-list-task"></i> Mis tareas</a></li>
         </ul>
+
+        <div class="d-flex align-items-center gap-2 ms-auto">
+          <span class="text-white-50 small d-none d-lg-inline">Hola, <span id="whoami"></span></span>
+
+          <a id="btnLogin" class="btn btn-outline-light btn-sm d-none" href="auth.html">
+            <i class="bi bi-person"></i> Iniciar sesión
+          </a>
+
+          <button id="logoutBtn" class="btn btn-warning btn-sm d-none">
+            <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+          </button>
+        </div>
       </div>
     </div>
   </nav>
 
-  <!-- Header/Hero Section -->
+<!-- Header/Hero Section -->
   <header class="bg-gradient-primary text-white py-5 mb-5">
     <div class="container">
       <div class="row align-items-center">
@@ -50,16 +63,10 @@
 
   <!-- App: se oculta si no está autenticado -->
   <section id="appSection" style="display:none;">
-    <div class="container py-3 d-flex justify-content-between align-items-center">
-      <div>
-        <strong>Bienvenido, <span id="whoami"></span></strong>
-      </div>
-      <div>
-        <button id="logoutBtn" class="btn btn-outline-secondary">Cerrar sesión</button>
-      </div>
+    <div class="container mt-3">
+      <div id="alerts"></div>
     </div>
-
-    <div class="container mb-4">
+<div class="container mb-4">
       <!-- Formulario para añadir tareas -->
       <form id="taskForm" class="row g-2 align-items-center mb-3">
         <div class="col-md-6">
@@ -97,7 +104,7 @@
   </section>
 
   <!-- Footer -->
-  <footer class="bg-dark text-white py-4 mt-5">
+  <footer class="bg-dark text-white py-4 mt-5 w-100">
     <div class="container">
       <div class="text-center text-muted">
         <small>© 2024 TaskFlow. Proyecto desarrollado para Ingeniería Web 1 - UAX.</small>
