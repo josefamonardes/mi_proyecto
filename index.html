@@ -16,7 +16,7 @@
 </head>
 <body>
   <!-- Navegación -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm sticky-top">
+  <nav class="navbar navbar-expand-lg navbar-dark navbar-taskflow shadow-sm sticky-top">
     <div class="container">
       <a class="navbar-brand fw-bold" href="index.html">
         <i class="bi bi-check2-circle me-2"></i> TaskFlow
@@ -47,6 +47,8 @@
     </div>
   </nav>
 
+  <main>
+
 <!-- Header/Hero Section -->
   <header class="bg-gradient-primary text-white py-5 mb-5">
     <div class="container">
@@ -66,45 +68,96 @@
     <div class="container mt-3">
       <div id="alerts"></div>
     </div>
-<div class="container mb-4">
-      <!-- Formulario para añadir tareas -->
-      <form id="taskForm" class="row g-2 align-items-center mb-3">
-        <div class="col-md-6">
-          <input id="taskInput" class="form-control" placeholder="Nueva tarea..." required />
-        </div>
-        <div class="col-md-2">
-          <select id="prioritySelect" class="form-select">
-            <option value="baja">Baja</option>
-            <option value="media" selected>Media</option>
-            <option value="alta">Alta</option>
-            <option value="urgente">Urgente</option>
-          </select>
-        </div>
-        <div class="col-md-3">
-          <input id="taskDueDate" type="datetime-local" class="form-control" />
-        </div>
-        <div class="col-md-1">
-          <button class="btn btn-primary w-100" type="submit">Añadir</button>
-        </div>
-      </form>
 
-      <!-- Filtros simples -->
-      <div class="mb-3">
-        <div class="btn-group" role="group" id="filterGroup">
-          <button class="btn btn-outline-secondary active" data-filter="all">Todas</button>
-          <button class="btn btn-outline-secondary" data-filter="pending">Pendientes</button>
-          <button class="btn btn-outline-secondary" data-filter="completed">Completadas</button>
-          <button class="btn btn-outline-secondary" data-filter="urgent">Urgentes</button>
+    <div class="container mb-4">
+      <div class="row g-4">
+        <!-- Columna izquierda: formulario + filtros + lista -->
+        <div class="col-12 col-lg-7" id="tareas">
+          <!-- Formulario para añadir tareas -->
+          <form id="taskForm" class="mb-3">
+            <div class="row g-2 align-items-end">
+              <div class="col-12 col-lg-5">
+                <label class="form-label mb-1" for="taskInput">Nueva tarea</label>
+                <input id="taskInput" class="form-control" placeholder="Nueva tarea..." required />
+              </div>
+
+              <div class="col-6 col-lg-2">
+                <label class="form-label mb-1" for="prioritySelect">Prioridad</label>
+                <select id="prioritySelect" class="form-select">
+                  <option value="baja">Baja</option>
+                  <option value="media" selected>Media</option>
+                  <option value="alta">Alta</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+
+              <div class="col-6 col-lg-3">
+                <label class="form-label mb-1" for="taskDueDate">Día y hora</label>
+                <input id="taskDueDate" type="datetime-local" class="form-control" />
+              </div>
+
+              <div class="col-12 col-lg-2 d-grid">
+                <button class="btn btn-primary" type="submit">Añadir</button>
+              </div>
+            </div>
+          </form>
+
+          <!-- Filtros -->
+          <div class="mb-3">
+            <div class="btn-group" role="group" id="filterGroup">
+              <button class="btn btn-outline-primary active" data-filter="all">Todas</button>
+              <button class="btn btn-outline-secondary" data-filter="pending">Pendientes</button>
+              <button class="btn btn-outline-success" data-filter="completed">Completadas</button>
+              <button class="btn btn-outline-danger" data-filter="urgent">Urgentes</button>
+            </div>
+          </div>
+
+          <!-- Lista de tareas -->
+          <div id="tasksList" class="list-group"></div>
+
+          <!-- Próximas tareas (ordenadas cronológicamente) -->
+          <div class="card mt-3" id="upcomingCard">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="fw-semibold">Próximas tareas</div>
+                <small class="text-muted">Pendientes con fecha</small>
+              </div>
+              <div id="upcomingList" class="list-group list-group-flush"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna derecha: calendario -->
+        <div class="col-12 col-lg-5">
+          <div class="card calendar-card">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <button id="calPrev" class="btn btn-sm btn-outline-secondary" type="button" aria-label="Mes anterior">
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+
+                <div class="text-center">
+                  <div class="fw-semibold" id="calTitle">Calendario</div>
+                  <small class="text-muted">Haz clic en un día para filtrar · + para añadir</small>
+                </div>
+
+                <button id="calNext" class="btn btn-sm btn-outline-secondary" type="button" aria-label="Mes siguiente">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
+              </div>
+
+              <div class="calendar-grid" id="calendarGrid" aria-label="Calendario de tareas"></div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- Lista de tareas -->
-      <div id="tasksList" class="list-group"></div>
     </div>
   </section>
 
   <!-- Footer -->
-  <footer class="bg-dark text-white py-4 mt-5 w-100">
+    </main>
+
+<footer class="bg-dark text-white py-4 mt-5 w-100">
     <div class="container">
       <div class="text-center text-muted">
         <small>© 2024 TaskFlow. Proyecto desarrollado para Ingeniería Web 1 - UAX.</small>
@@ -112,9 +165,51 @@
     </div>
   </footer>
 
-  <!-- Scripts -->
-  <script src="script.js"></script>
+  <!-- Modal: añadir tarea desde calendario -->
+  <div class="modal fade" id="calendarAddModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Añadir tarea</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2">
+            <label class="form-label" for="calTaskDate">Fecha</label>
+            <input id="calTaskDate" class="form-control" type="text" readonly>
+          </div>
+          <div class="mb-2">
+            <label class="form-label" for="calTaskTitle">Título</label>
+            <input id="calTaskTitle" class="form-control" placeholder="Ej: estudiar..." maxlength="140">
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label" for="calTaskPriority">Prioridad</label>
+              <select id="calTaskPriority" class="form-select">
+                <option value="baja">Baja</option>
+                <option value="media" selected>Media</option>
+                <option value="alta">Alta</option>
+                <option value="urgente">Urgente</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label" for="calTaskTime">Hora</label>
+              <input id="calTaskTime" class="form-control" type="time" value="12:00">
+            </div>
+          </div>
+          <small class="text-muted d-block mt-2">Se guardará con la fecha seleccionada.</small>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button id="calTaskSave" type="button" class="btn btn-primary">Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts (bootstrap primero porque el calendario usa Modal) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="script.js"></script>
 
   <!-- Inicialización extra (fecha mínima en input de fecha) -->
   <script>

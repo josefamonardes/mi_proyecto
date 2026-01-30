@@ -31,12 +31,47 @@ document.addEventListener('DOMContentLoaded', function() {
   const tasksList = document.getElementById('tasksList');
   const filterGroup = document.getElementById('filterGroup');
 
+  // Calendario (solo existe en index.html)
+  const calPrev = document.getElementById('calPrev');
+  const calNext = document.getElementById('calNext');
+  const calTitle = document.getElementById('calTitle');
+  const calendarGrid = document.getElementById('calendarGrid');
+  const calendarAddModalEl = document.getElementById('calendarAddModal');
+  const calTaskDate = document.getElementById('calTaskDate');
+  const calTaskTitle = document.getElementById('calTaskTitle');
+  const calTaskPriority = document.getElementById('calTaskPriority');
+  const calTaskTime = document.getElementById('calTaskTime');
+  const calTaskSave = document.getElementById('calTaskSave');
+
+  // ====================
+  // ACCESIBILIDAD: evitar warning aria-hidden + focus en Bootstrap Modal
+  // ====================
+  let lastFocusedBeforeModal = null;
+  if (calendarAddModalEl) {
+    calendarAddModalEl.addEventListener('show.bs.modal', () => {
+      lastFocusedBeforeModal = document.activeElement;
+    });
+    calendarAddModalEl.addEventListener('hidden.bs.modal', () => {
+      // Devuelve el foco fuera del modal (evita "Blocked aria-hidden..." en Chrome)
+      if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function') {
+        lastFocusedBeforeModal.focus();
+      }
+      lastFocusedBeforeModal = null;
+    });
+  }
+
   // ====================
   // VARIABLES GLOBALES
   // ====================
   let tasks = [];
   let currentFilter = 'all';
+  let selectedDateYMD = null; // filtro por día desde el calendario (YYYY-MM-DD)
   let currentUser = null;
+
+  // Calendario: mes en vista
+  let calCursor = new Date();
+  calCursor.setHours(0, 0, 0, 0);
+  calCursor.setDate(1);
 
   // ====================
   // UTIL: alert simple
@@ -228,35 +263,89 @@ document.addEventListener('DOMContentLoaded', function() {
   // ====================
   function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text || ''; return div.innerHTML; }
 
+  
+  function passStatusFilter(t) {
+    if (currentFilter === 'all') return true;
+    if (currentFilter === 'pending') return !t.completed;
+    if (currentFilter === 'completed') return !!t.completed;
+    if (currentFilter === 'urgent') return String(t.priority || '').toLowerCase() === 'urgente';
+    return true;
+  }
+
+  function getFilteredTasksArray(opts = { includeDate: true }) {
+    const arr = Array.isArray(tasks) ? tasks : [];
+    return arr.filter(t => {
+      if (!passStatusFilter(t)) return false;
+
+      if (opts.includeDate && selectedDateYMD) {
+        const d = normalizeDueDate(t.due_date || t.dueDate);
+        if (!d) return false;
+        return toYMD(d) === selectedDateYMD;
+      }
+      return true;
+    });
+  }
+
+
+  function normalizeDueDate(raw) {
+    const s = String(raw || '').trim();
+    if (!s) return null;
+    // MySQL: 'YYYY-MM-DD HH:MM:SS' -> ISO-ish
+    const isoLike = s.includes(' ') ? s.replace(' ', 'T') : s;
+    const d = new Date(isoLike);
+    if (Number.isNaN(d.getTime())) return null;
+    return d;
+  }
+
+  function toYMD(dateObj) {
+    const y = dateObj.getFullYear();
+    const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const d = String(dateObj.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
   function renderTasks() {
     // Si no existe el contenedor de tareas, no hacemos nada (estamos en auth.html u otra página)
     if (!tasksList) return;
 
     tasksList.innerHTML = '';
 
-    const arr = Array.isArray(tasks) ? tasks : [];
-    const filtered = arr.filter(t => {
-      if (currentFilter === 'all') return true;
-      if (currentFilter === 'pending') return !t.completed;
-      if (currentFilter === 'completed') return t.completed;
-      if (currentFilter === 'urgent') return t.priority === 'urgente';
-      return true;
-    });
+    const filtered = getFilteredTasksArray();
 
     if (filtered.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'text-muted';
       empty.textContent = 'No hay tareas.';
       tasksList.appendChild(empty);
+      // aunque no haya tareas, el calendario y el panel deben actualizarse
+      renderUpcoming();
+      renderCalendar();
       return;
     }
 
     filtered.forEach(task => {
       const item = document.createElement('div');
-      item.className = 'list-group-item d-flex justify-content-between align-items-start';
+      // prioridad normalizada (la usa tanto el badge como los estilos CSS por data-priority)
+      const prLabel = String(task.priority || 'media').toLowerCase();
+
+      item.className = 'list-group-item task-item d-flex justify-content-between align-items-start';
+      item.dataset.priority = prLabel;
+      if (task.completed) item.classList.add('task-completed');
+
       const left = document.createElement('div');
-      left.innerHTML = `<div class="fw-semibold">${escapeHtml(task.title || task.text || '')}</div>
-                        <small class="text-muted">${task.due_date || task.dueDate || ''}</small>`;
+      const prClassMap = { baja: 'text-bg-secondary', media: 'text-bg-primary', alta: 'text-bg-warning', urgente: 'text-bg-danger' };
+      const prBadgeClass = prClassMap[prLabel] || 'text-bg-primary';
+
+      // Fecha: si viene ISO o MySQL, la dejamos tal cual (tu backend ya envía ISO en la creación)
+      const dueText = String(task.due_date || task.dueDate || '').trim();
+
+      left.innerHTML = `
+        <div class="d-flex align-items-center gap-2">
+          <div class="fw-semibold">${escapeHtml(task.title || task.text || '')}</div>
+          <span class="badge ${prBadgeClass}">${escapeHtml(prLabel)}</span>
+        </div>
+        <small class="text-muted">${dueText ? escapeHtml(dueText) : 'Sin fecha'}</small>
+      `;
       const right = document.createElement('div');
       const doneBtn = document.createElement('button');
       doneBtn.className = 'btn btn-sm btn-outline-success me-2';
@@ -293,6 +382,199 @@ document.addEventListener('DOMContentLoaded', function() {
       item.appendChild(right);
       tasksList.appendChild(item);
     });
+
+    // Mantén el calendario y el panel de próximas tareas sincronizados
+    renderUpcoming();
+    renderCalendar();
+  }
+
+  function formatShortDate(d) {
+    try {
+      return new Intl.DateTimeFormat('es-ES', { day: '2-digit', month: 'short' }).format(d);
+    } catch { return ''; }
+  }
+
+  function renderUpcoming() {
+    const box = document.getElementById('upcomingList');
+    if (!box) return;
+
+    const upcoming = (Array.isArray(tasks) ? tasks : [])
+      .filter(t => !t.completed)
+      .map(t => ({ t, d: normalizeDueDate(t.due_date || t.dueDate) }))
+      .filter(x => x.d)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, 6);
+
+    box.innerHTML = '';
+
+    if (!upcoming.length) {
+      const empty = document.createElement('div');
+      empty.className = 'text-muted';
+      empty.style.fontSize = '.9rem';
+      empty.textContent = 'No hay tareas pendientes con fecha.';
+      box.appendChild(empty);
+      return;
+    }
+
+    upcoming.forEach(({ t, d }) => {
+      const pr = String(t.priority || 'media').toLowerCase();
+
+      const row = document.createElement('div');
+      row.className = 'list-group-item d-flex align-items-center justify-content-between';
+
+      row.innerHTML = `
+        <div class="me-2">
+          <div class="fw-semibold">${escapeHtml(t.title || t.text || '')}</div>
+          <div class="text-muted" style="font-size:.85rem;">
+            <i class="bi bi-calendar3 me-1"></i>${escapeHtml(formatShortDate(d))}
+          </div>
+        </div>
+        <span class="badge rounded-pill ${({"baja":"text-bg-secondary","media":"text-bg-primary","alta":"text-bg-warning","urgente":"text-bg-danger"}[pr] || "text-bg-primary")}">${escapeHtml(pr)}</span>
+      `;
+      box.appendChild(row);
+    });
+  }
+
+
+  function renderCalendar() {
+    if (!calendarGrid) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Title
+    if (calTitle) {
+      const fmt = new Intl.DateTimeFormat('es-ES', { month: 'long', year: 'numeric' });
+      calTitle.textContent = fmt.format(calCursor);
+    }
+
+    const year = calCursor.getFullYear();
+    const month = calCursor.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    // Queremos semanas empezando en lunes (es-ES)
+    const jsDow = firstDay.getDay(); // 0 domingo..6 sábado
+    const leading = (jsDow + 6) % 7; // lunes=0
+
+    calendarGrid.innerHTML = '';
+
+    // Cabeceras
+    const heads = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    heads.forEach(h => {
+      const el = document.createElement('div');
+      el.className = 'cal-head';
+      el.textContent = h;
+      calendarGrid.appendChild(el);
+    });
+
+    // Mapa de tareas por día
+    const dayMap = new Map();
+    getFilteredTasksArray({ includeDate: false }).forEach(t => {
+      const d = normalizeDueDate(t.due_date || t.dueDate);
+      if (!d) return;
+      const key = toYMD(d);
+      if (!dayMap.has(key)) dayMap.set(key, []);
+      dayMap.get(key).push({ task: t, dateObj: d });
+    });
+    // orden por hora dentro del día
+    dayMap.forEach(list => list.sort((a, b) => a.dateObj - b.dateObj));
+
+    // celdas del mes
+    const totalDays = lastDay.getDate();
+    const totalCells = 42; // 6 semanas * 7
+
+    for (let i = 0; i < totalCells; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell';
+
+      const dayNum = i - leading + 1;
+      const inMonth = dayNum >= 1 && dayNum <= totalDays;
+
+      if (!inMonth) {
+        cell.classList.add('is-muted');
+        calendarGrid.appendChild(cell);
+        continue;
+      }
+
+      const dateObj = new Date(year, month, dayNum);
+      dateObj.setHours(0, 0, 0, 0);
+      const ymd = toYMD(dateObj);
+      cell.dataset.date = ymd;
+      if (dateObj.getTime() === today.getTime()) cell.classList.add('is-today');
+      if (selectedDateYMD && ymd === selectedDateYMD) cell.classList.add('is-selected');
+
+      const top = document.createElement('div');
+      top.className = 'd-flex align-items-center justify-content-between';
+      top.innerHTML = `<div class="cal-daynum">${dayNum}</div>`;
+
+      const addBtn = document.createElement('button');
+      addBtn.type = 'button';
+      addBtn.className = 'cal-add';
+      addBtn.innerHTML = '<i class="bi bi-plus"></i>';
+      addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openCalendarAddModal(ymd);
+      });
+      top.appendChild(addBtn);
+
+      cell.appendChild(top);
+
+      
+      const items = dayMap.get(ymd) || [];
+      if (items.length) {
+        const markers = document.createElement('div');
+        markers.className = 'cal-markers';
+
+        const prSet = new Set();
+        items.forEach(({ task }) => prSet.add(String(task.priority || 'media').toLowerCase()));
+
+        const order = ['urgente', 'alta', 'media', 'baja'];
+        order.filter(p => prSet.has(p)).forEach(pr => {
+          const dot = document.createElement('span');
+          dot.className = 'cal-marker';
+          dot.dataset.priority = pr;
+          dot.title = pr;
+          markers.appendChild(dot);
+        });
+
+        const count = document.createElement('span');
+        count.className = 'cal-count';
+        count.textContent = items.length;
+        markers.appendChild(count);
+
+        cell.appendChild(markers);
+      }
+
+      // click en día: filtra la lista (toggle). El + sigue abriendo el modal.
+      cell.addEventListener('click', () => {
+        selectedDateYMD = (selectedDateYMD === ymd) ? null : ymd;
+        renderTasks();
+        renderCalendar();
+      });
+
+      calendarGrid.appendChild(cell);
+    }
+  }
+
+  let calendarModal = null;
+  function openCalendarAddModal(ymd) {
+    if (!calendarAddModalEl) return;
+    if (calTaskDate) calTaskDate.value = ymd;
+    if (calTaskTitle) calTaskTitle.value = '';
+    if (calTaskPriority) calTaskPriority.value = 'media';
+    if (calTaskTime) calTaskTime.value = '12:00';
+
+    try {
+      calendarModal = calendarModal || bootstrap.Modal.getOrCreateInstance(calendarAddModalEl);
+      calendarModal.show();
+      setTimeout(() => calTaskTitle && calTaskTitle.focus(), 80);
+    } catch (e) {
+      // si bootstrap no está, hacemos fallback: rellenar el form principal
+      if (dueDateInput) dueDateInput.value = `${ymd}T12:00`;
+      if (taskInput) taskInput.focus();
+    }
   }
 
   async function loadTasks() {
@@ -465,6 +747,65 @@ document.addEventListener('DOMContentLoaded', function() {
       Array.from(filterGroup.querySelectorAll('button')).forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       renderTasks();
+    });
+  }
+
+  // Calendario: navegación de mes
+  if (calPrev) {
+    calPrev.addEventListener('click', () => {
+      calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() - 1, 1);
+      calCursor.setHours(0, 0, 0, 0);
+      renderCalendar();
+    });
+  }
+
+  if (calNext) {
+    calNext.addEventListener('click', () => {
+      calCursor = new Date(calCursor.getFullYear(), calCursor.getMonth() + 1, 1);
+      calCursor.setHours(0, 0, 0, 0);
+      renderCalendar();
+    });
+  }
+
+  // Calendario: guardar tarea desde modal
+  if (calTaskSave) {
+    calTaskSave.addEventListener('click', async () => {
+      const ymd = (calTaskDate && calTaskDate.value || '').trim();
+      const title = (calTaskTitle && calTaskTitle.value || '').trim();
+      const priority = (calTaskPriority && calTaskPriority.value) || 'media';
+      const time = (calTaskTime && calTaskTime.value) || '12:00';
+
+      if (!title) {
+        showAlert('⚠️ Escribe un título para la tarea', 'warning');
+        calTaskTitle && calTaskTitle.focus();
+        return;
+      }
+
+      const due_date = ymd ? `${ymd}T${time}` : null;
+      const task = { title, priority, due_date, completed: 0 };
+
+      try {
+        const saved = await saveTask(task);
+        if (!Array.isArray(tasks)) tasks = [];
+        tasks.push(saved);
+        renderTasks();
+        showAlert('✅ Tarea añadida desde el calendario', 'success');
+
+        try {
+          const modal = bootstrap.Modal.getOrCreateInstance(calendarAddModalEl);
+          if (document.activeElement) document.activeElement.blur();
+          modal.hide();
+        } catch (e) {
+          // ignore
+        }
+      } catch (err) {
+        if (err && err.status === 401) {
+          showAlert('Necesitas iniciar sesión para crear tareas', 'warning');
+          redirectToAuth();
+          return;
+        }
+        showAlert(err.message || 'Error al guardar tarea', 'danger');
+      }
     });
   }
 

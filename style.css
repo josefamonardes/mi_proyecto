@@ -4,14 +4,116 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: #f6f7fb;
 }
 main { flex: 1 0 auto; }
 footer { flex-shrink: 0; width: 100%; }
 
-/* Navbar */
-.navbar-brand { letter-spacing: 0.2px; }
+/* Navbar: que encaje con el tema */
+.navbar-taskflow {
+  background: linear-gradient(135deg, #4361ee 0%, #3a0ca3 100%) !important;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.navbar-taskflow .navbar-brand { letter-spacing: 0.2px; }
+.navbar-taskflow .nav-link { color: rgba(255,255,255,.85); }
+.navbar-taskflow .nav-link:hover { color: #fff; }
+.navbar-taskflow .nav-link.active { color: #fff; font-weight: 600; }
 
-/* Añade esto a tu style.css */
+.calendar-card { border: 0; border-radius: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.06); }
+
+/* Calendario mensual */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  user-select: none;
+}
+
+.cal-head {
+  text-align: center;
+  font-size: .8rem;
+  color: rgba(0,0,0,.55);
+  font-weight: 600;
+}
+
+.cal-cell {
+  position: relative;
+  min-height: 92px;
+  padding: 10px;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  background: rgba(255,255,255,.9);
+  overflow: hidden;
+}
+
+.cal-cell.is-muted {
+  opacity: .45;
+  background: rgba(255,255,255,.65);
+}
+
+.cal-cell.is-today {
+  outline: 2px solid rgba(67, 97, 238, .45);
+}
+
+.cal-daynum {
+  font-weight: 700;
+  font-size: .9rem;
+}
+
+.cal-add {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: rgba(255,255,255,.92);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity .12s ease, transform .12s ease;
+}
+
+.cal-cell:hover .cal-add {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+
+.cal-markers {
+  margin-top: 10px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.cal-marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.10);
+}
+
+.cal-marker[data-priority="baja"] { background: #6c757d; }
+.cal-marker[data-priority="media"] { background: #198754; }
+.cal-marker[data-priority="alta"] { background: #fd7e14; }
+.cal-marker[data-priority="urgente"] { background: #dc3545; }
+
+.cal-count {
+  margin-left: auto;
+  font-size: .75rem;
+  color: rgba(0,0,0,.55);
+  font-weight: 600;
+}
+
+.cal-cell.is-selected {
+  outline: 2px solid rgba(58, 12, 163, .55);
+  background: rgba(58, 12, 163, .04);
+}
+
 .task-item {
     transition: all 0.3s ease;
     border-left: 4px solid #dee2e6;
@@ -90,7 +192,6 @@ footer { flex-shrink: 0; width: 100%; }
     }
 }
 
-/* Añade esto a tu style.css */
 /* Estilos para tareas con fecha próxima */
 .task-due-soon {
     border-left-color: #ffc107 !important;
@@ -173,3 +274,10 @@ footer { flex-shrink: 0; width: 100%; }
     color: #000;
     font-weight: bold;
 }
+
+
+
+/* Botones: hover más evidente */
+.btn { transition: transform .08s ease, box-shadow .08s ease; }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
