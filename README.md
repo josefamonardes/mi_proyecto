@@ -38,7 +38,7 @@ Incluye **registro/login/logout**, **gestión de perfil** (ver datos + cambiar c
 
 ---
 
-## 📁 Estructura del proyecto (real)
+## 📁 Estructura del proyecto
 
 ```
 mi_proyecto/
@@ -76,7 +76,7 @@ mi_proyecto/
 
 ---
 
-## 🚀 Instalación (XAMPP recomendado)
+## 🚀 Instalación
 
 ### 1) Requisitos
 - PHP 8+
@@ -103,7 +103,7 @@ Edita el archivo:
 
 - `config/database.php`
 
-Valores por defecto (si usas XAMPP típico):
+Valores por defecto:
 - host: `localhost`
 - port: `3306`
 - user: `root`
@@ -153,8 +153,3 @@ Base: `/mi_proyecto/api/`
 ## 📄 Documentación adicional
 - `documentacion_proyecto.md` (memoria técnica)
 - `database/schema.sql` (script de base de datos)
-
----
-
-## ✅ Estado
-Proyecto finalizado y listo para entrega.
