@@ -9,8 +9,6 @@ El presente documento describe el desarrollo del proyecto **TaskFlow**, una apli
 
 El objetivo principal del proyecto es aplicar de forma práctica los contenidos vistos en la asignatura de **Ingeniería Web**, cubriendo tanto el desarrollo frontend como backend, con especial atención a la **seguridad**, la **arquitectura del sistema** y la **persistencia de datos**.
 
-El proyecto cumple los requisitos establecidos en el documento “Proyecto Full Stack”, abarcando las Unidades 2 a 6.
-
 ---
 
 ## 2. Objetivos del proyecto
@@ -69,7 +67,7 @@ La relación entre usuarios y tareas es **uno a muchos**, ya que un usuario pued
 
 ---
 
-## 5. Backend – Unidad 4
+## 5. Backend
 
 El backend está desarrollado en PHP y se organiza en una API estructurada.
 
@@ -105,7 +103,7 @@ Estas medidas previenen ataques comunes como SQL Injection o acceso no autorizad
 
 ---
 
-## 7. Frontend – Unidades 2 y 3
+## 7. Frontend
 
 ### HTML
 Se utiliza HTML5 con estructura semántica para mejorar la accesibilidad y organización del contenido.
@@ -121,7 +119,7 @@ JavaScript se emplea para:
 
 ---
 
-## 8. Interacción avanzada – Unidad 6
+## 8. Interacción avanzada
 
 La comunicación entre frontend y backend se realiza mediante **Fetch API**, permitiendo:
 - Operaciones CRUD sin recargar la página.
@@ -150,19 +148,3 @@ Durante el desarrollo se afrontaron retos relacionados con:
 El proyecto permitió afianzar conocimientos de desarrollo Full Stack y buenas prácticas de programación web.
 
 ---
-
-## 11. Conclusión
-
-TaskFlow cumple con los requisitos del Proyecto Full Stack, ofreciendo una aplicación funcional, segura y bien estructurada.
-
-El proyecto demuestra la correcta aplicación de los conceptos vistos en la asignatura y sienta una base sólida para futuras ampliaciones.
-
----
-
-## 12. Posibles mejoras futuras
-
-- Implementación de roles de usuario.
-- Edición avanzada de tareas.
-- Sistema de notificaciones.
-- Refactorización completa a POO.
-
