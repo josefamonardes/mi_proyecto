@@ -652,6 +652,20 @@ document.addEventListener('DOMContentLoaded', function() {
       const username = (registerForm.username && registerForm.username.value || '').trim();
       const email = (registerForm.email && registerForm.email.value || '').trim();
       const password = (registerForm.password && registerForm.password.value) || '';
+// Validaciones cliente
+if (!isValidUsername(username)) {
+  showAlert('Usuario inválido: usa 3-20 caracteres (letras/números y . _ -).', 'warning');
+  return;
+}
+if (!isValidEmail(email)) {
+  showAlert('Email inválido.', 'warning');
+  return;
+}
+if (!isStrongPassword(password)) {
+  showAlert('Contraseña débil: mínimo 8 caracteres con mayúscula, minúscula y número.', 'warning');
+  return;
+}
+
       try {
         const res = await registerUser(username, email, password);
         if (res && res.ok) {
@@ -671,6 +685,21 @@ document.addEventListener('DOMContentLoaded', function() {
       e.preventDefault();
       const identifier = (loginForm.identifier && loginForm.identifier.value || '').trim();
       const password = (loginForm.password && loginForm.password.value) || '';
+// Validaciones cliente (identifier puede ser email o username)
+if (!identifier) {
+  showAlert('Introduce tu email o usuario.', 'warning');
+  return;
+}
+if (identifier.includes('@') && !isValidEmail(identifier)) {
+  showAlert('Email inválido.', 'warning');
+  return;
+}
+if (!password || password.length < 8) {
+  // no forces la política completa en login, pero mínimo razonable
+  showAlert('La contraseña debe tener al menos 8 caracteres.', 'warning');
+  return;
+}
+
       try {
         const res = await loginUser(identifier, password);
         if (res && res.ok) {
@@ -866,3 +895,62 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   })();
 });
+
+// ===== Validación cliente (registro) =====
+const regForm = document.getElementById('registerForm');
+if (regForm) {
+  regForm.addEventListener('submit', (e) => {
+    const username = document.getElementById('reg_username').value.trim();
+    const email = document.getElementById('reg_email').value.trim();
+    const password = document.getElementById('reg_password').value;
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const strongPass =
+      password.length >= 8 &&
+      /[a-z]/.test(password) &&
+      /[A-Z]/.test(password) &&
+      /[0-9]/.test(password);
+
+    if (username.length < 3) {
+      alert('El usuario debe tener al menos 3 caracteres');
+      e.preventDefault();
+      return;
+    }
+
+    if (!emailRegex.test(email)) {
+      alert('Email no válido');
+      e.preventDefault();
+      return;
+    }
+
+    if (!strongPass) {
+      alert('La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula y número');
+      e.preventDefault();
+    }
+  });
+}
+
+
+/*
+| Validaciones en cliente (Unidad 2/3)
+*/
+function isValidEmail(email) {
+  // Suficiente para validación básica de formulario
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function isValidUsername(username) {
+  return typeof username === 'string'
+    && username.length >= 3
+    && username.length <= 20
+    && /^[a-zA-Z0-9._-]+$/.test(username);
+}
+
+function isStrongPassword(password) {
+  return typeof password === 'string'
+    && password.length >= 8
+    && /[a-z]/.test(password)
+    && /[A-Z]/.test(password)
+    && /[0-9]/.test(password);
+}
+
